@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hörken Bygdegård</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
+        .content-wrapper { flex: 1; }
+        .navbar { background-color: #3e2723 !important; border-bottom: 2px solid #5d4037; }
+        .main-footer { background-color: #3e2723; color: #d7ccc8; border-top: 4px solid #5d4037; }
+        .footer-link { color: #d7ccc8; text-decoration: none; transition: 0.3s; }
+        .footer-link:hover { color: #ffffff; }
+        .signature { font-size: 0.85rem; color: #a1887f; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">HÖRKEN BYGDEGÅRD</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link fw-bold" href="{{ url_for('index') }}">HEM</a></li>
+                    {% if not usuario_logueado %}
+                    <li class="nav-item"><a class="nav-link fw-bold" href="{{ url_for('login') }}">LOGGA IN</a></li>
+                    {% else %}
+                    <li class="nav-item"><a class="nav-link fw-bold text-warning" href="{{ url_for('logout') }}">LOGGA UT</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 content-wrapper">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer class="main-footer pt-5 pb-4 mt-5">
+        <div class="container">
+            <div class="row text-center text-md-start">
+                <div class="col-md-4 mb-4">
+                    <h5 class="fw-bold text-white mb-3">HÖRKEN BYGDEGÅRD</h5>
+                    <p class="small">En samlingsplats för gemenskap, kultur och glädje i hjärtat av vår by.</p>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <h5 class="fw-bold text-white mb-3">KONTAKT</h5>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><i class="bi bi-geo-alt-fill me-2"></i> Hålldammsvägen 2, Hörken</li>
+                        <li class="mb-2"><i class="bi bi-telephone-fill me-2"></i> 070-860 63 88 (Emilia)</li>
+                        <li class="mb-2"><i class="bi bi-envelope-at-fill me-2"></i> emilia.granelli@gmail.com</li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <h5 class="fw-bold text-white mb-3">HITTA HIT</h5>
+                    <div class="ratio ratio-16x9 rounded overflow-hidden shadow-sm">
+                        <iframe 
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1980.9!2d14.9961!3d60.0335!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x465d63683660a9f5%3A0x6b864a7c06296064!2sH%C3%A5lldammsv%C3%A4gen%202%2C%20772%2094%20H%C3%B6rken%2C%20Sweden!5e0!3m2!1sen!2sse!4v1700000000000" 
+                            style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                    </div>
+                </div>
+            </div>
+            <hr class="border-secondary">
+            <div class="text-center mt-3">
+                <p class="small mb-1">© 2026 Hörken Bygdegårdsförening. Alla rättigheter förbehållna.</p>
+                <p class="signature fw-bold mt-2">Created by Daniel Fernandez </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

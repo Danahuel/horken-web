@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow max-width-600 mx-auto border-0">
+    <div class="card-header bg-primary text-white text-center py-3"><h3>Post New Event</h3></div>
+    <div class="card-body p-4">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3"><label class="form-label fw-bold">Event Title</label><input type="text" name="titulo" class="form-control" placeholder="e.g. Winter Festival" required></div>
+            <div class="row">
+                <div class="col-md-6 mb-3"><label class="form-label fw-bold">Date</label><input type="date" name="fecha" class="form-control" required></div>
+                <div class="col-md-6 mb-3"><label class="form-label fw-bold">Time</label><input type="time" name="hora" class="form-control"></div>
+            </div>
+            <div class="mb-3"><label class="form-label fw-bold">Location</label><input type="text" name="ubicacion" class="form-control"></div>
+            <div class="mb-3"><label class="form-label fw-bold">Brief Description</label><textarea name="descripcion" class="form-control" rows="2"></textarea></div>
+            <div class="mb-3 p-3 border rounded bg-light shadow-sm">
+                <label class="form-label text-primary fw-bold">Upload Photos (Select at least 3)</label>
+                <input type="file" name="foto_evento" class="form-control" accept="image/*" multiple>
+                <div class="form-text">Hold Ctrl to select multiple files.</div>
+            </div>
+            <div class="mb-3"><label class="form-label fw-bold">Event News / Chronicle</label><textarea name="noticia" class="form-control" rows="4"></textarea></div>
+            <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">PUBLISH EVENT</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
