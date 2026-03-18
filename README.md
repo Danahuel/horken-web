@@ -46,11 +46,6 @@ py -3.12 app.py
 http://localhost:5000
 ```
 
-## 🔐 Demo Accounts
-
-- **Admin:** `admin` / Password: `admin123`
-- **User:** `user1` / Password: `pass123`
-
 ## 📂 Project Structure
 
 ```
