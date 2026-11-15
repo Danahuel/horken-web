@@ -1,0 +1,317 @@
+{
+  "session_id": "20261115-034251-cf2f",
+  "operator": "Taller",
+  "location": "Alemania",
+  "recipients": [],
+  "simulated": true,
+  "updated_at": "2026-11-15T03:43:01.800840+00:00",
+  "machine": {
+    "make": "ARJES",
+    "model": "VZ950",
+    "serial": "SIM-ARJ-OTRA-77",
+    "unit": "",
+    "brand_key": "arjes",
+    "brand_name": "Arjes",
+    "connector": "Según modelo; el motor industrial suele exponer J1939",
+    "official_software": "Servicio técnico Arjes + software del fabricante del motor",
+    "brand_note": "Trituradoras: averías de motor por J1939. El control de rotores/hidráulico es propio de Arjes y se registra en bruto.",
+    "machine_class": "trituradora",
+    "machine_class_label": "Trituradora / biotrituradora"
+  },
+  "lamps": {
+    "mil": false,
+    "red_stop": false,
+    "amber_warning": true,
+    "protect": false
+  },
+  "summary": {
+    "active_dtcs": 2,
+    "history_dtcs": 0,
+    "max_severity": 5,
+    "ecus": 2,
+    "frames": 262,
+    "repair_cost_min_eur": 610,
+    "repair_cost_max_eur": 7400
+  },
+  "dtcs": [
+    {
+      "code": "SPN 110 FMI 16",
+      "spn": 110,
+      "fmi": 16,
+      "active": true,
+      "occurrences": 1,
+      "source": 0,
+      "source_name": "Motor #1 (ECM)",
+      "name": "Temperatura del refrigerante motor",
+      "system": "Motor · Refrigeración",
+      "fmi_text": "Valor por encima de lo normal (nivel moderado)",
+      "fault_type": "condicion",
+      "severity": 5,
+      "critical": true,
+      "warning": "Si la temperatura es alta, dejar el motor al ralentí 3-5 min y parar. No abrir el tapón en caliente.",
+      "causes": [
+        "Radiador obstruido por polvo/paja (muy habitual en obra)",
+        "Nivel de refrigerante bajo o fuga",
+        "Termostato bloqueado",
+        "Correa o bomba de agua defectuosa",
+        "Ventilador hidráulico/viscoso sin funcionar",
+        "Junta de culata (gases en refrigerante)"
+      ],
+      "steps": [
+        "Limpiar radiador, enfriador de aceite hidráulico e intercooler con aire a presión desde el lado del motor",
+        "Comprobar nivel y fugas en frío",
+        "Comprobar funcionamiento del ventilador a temperatura de trabajo",
+        "Probar termostato en agua caliente",
+        "Prueba de CO2 en el depósito de expansión si se sospecha junta de culata"
+      ],
+      "parts": [
+        {
+          "nombre": "Termostato + junta",
+          "min": 40,
+          "max": 180
+        },
+        {
+          "nombre": "Bomba de agua",
+          "min": 250,
+          "max": 900
+        },
+        {
+          "nombre": "Refrigerante (20 L)",
+          "min": 60,
+          "max": 140
+        }
+      ],
+      "difficulty": 3,
+      "labour_hours": 4.0,
+      "cost_min_eur": 194,
+      "cost_max_eur": 1186,
+      "known": true,
+      "proprietary": false,
+      "brand_note": "Trituradoras: averías de motor por J1939. El control de rotores/hidráulico es propio de Arjes y se registra en bruto."
+    },
+    {
+      "code": "SPN 3251 FMI 16",
+      "spn": 3251,
+      "fmi": 16,
+      "active": true,
+      "occurrences": 4,
+      "source": 0,
+      "source_name": "Motor #1 (ECM)",
+      "name": "Presión diferencial del filtro de partículas (DPF)",
+      "system": "Emisiones · DPF",
+      "fmi_text": "Valor por encima de lo normal (nivel moderado)",
+      "fault_type": "condicion",
+      "severity": 3,
+      "critical": false,
+      "warning": null,
+      "causes": [
+        "DPF saturado de hollín (regeneraciones interrumpidas)",
+        "DPF con ceniza (fin de vida, requiere limpieza)",
+        "Tubos del sensor obstruidos o rotos"
+      ],
+      "steps": [
+        "Revisar tubos del sensor diferencial",
+        "Realizar regeneración estacionaria/forzada",
+        "Si la ceniza es alta: desmontar y limpiar el DPF en máquina de limpieza"
+      ],
+      "parts": [
+        {
+          "nombre": "Limpieza profesional DPF",
+          "min": 300,
+          "max": 700
+        },
+        {
+          "nombre": "DPF nuevo",
+          "min": 2000,
+          "max": 6000
+        }
+      ],
+      "difficulty": 3,
+      "labour_hours": 3.0,
+      "cost_min_eur": 416,
+      "cost_max_eur": 6214,
+      "known": true,
+      "proprietary": false,
+      "brand_note": "Trituradoras: averías de motor por J1939. El control de rotores/hidráulico es propio de Arjes y se registra en bruto."
+    }
+  ],
+  "ecus": [
+    {
+      "address": 0,
+      "address_hex": "0x00",
+      "name": "Motor #1 (ECM)",
+      "software": [
+        "SIM-ENG-ARJ-7.1"
+      ],
+      "ecu_id": null,
+      "component": {
+        "make": "ARJES",
+        "model": "VZ950",
+        "serial": "SIM-ARJ-OTRA-77",
+        "unit": ""
+      },
+      "engine_hours": 850.2,
+      "total_revolutions": 81619000.0,
+      "total_fuel_l": 32307.5,
+      "total_km": null,
+      "total_km_hr": null,
+      "active_dtcs": 2,
+      "history_dtcs": 0
+    },
+    {
+      "address": 23,
+      "address_hex": "0x17",
+      "name": "Cuadro de instrumentos",
+      "software": [
+        "SIM-ARJ-HMI-2.0"
+      ],
+      "ecu_id": null,
+      "component": {
+        "make": "ARJES",
+        "model": "VZ950",
+        "serial": "SIM-ARJ-00911",
+        "unit": ""
+      },
+      "engine_hours": 6420.7,
+      "total_revolutions": null,
+      "total_fuel_l": null,
+      "total_km": null,
+      "total_km_hr": null,
+      "active_dtcs": 0,
+      "history_dtcs": 0
+    }
+  ],
+  "live": {
+    "rpm": {
+      "value": 1804.25,
+      "unit": "rpm",
+      "label": "Régimen motor",
+      "source": 0
+    },
+    "torque_pct": {
+      "value": 75,
+      "unit": "%",
+      "label": "Par motor real",
+      "source": 0
+    },
+    "coolant_c": {
+      "value": 78,
+      "unit": "°C",
+      "label": "Temperatura refrigerante",
+      "source": 0
+    },
+    "fuel_temp_c": {
+      "value": 42,
+      "unit": "°C",
+      "label": "Temperatura combustible",
+      "source": 0
+    },
+    "oil_temp_c": {
+      "value": 84.625,
+      "unit": "°C",
+      "label": "Temperatura aceite motor",
+      "source": 0
+    },
+    "oil_level_pct": {
+      "value": 92.0,
+      "unit": "%",
+      "label": "Nivel aceite motor",
+      "source": 0
+    },
+    "oil_pressure_kpa": {
+      "value": 340.0,
+      "unit": "kPa",
+      "label": "Presión aceite motor",
+      "source": 0
+    },
+    "coolant_level_pct": {
+      "value": 94.8,
+      "unit": "%",
+      "label": "Nivel refrigerante",
+      "source": 0
+    },
+    "boost_kpa": {
+      "value": 180.0,
+      "unit": "kPa",
+      "label": "Presión de sobrealimentación",
+      "source": 0
+    },
+    "intake_temp_c": {
+      "value": 48,
+      "unit": "°C",
+      "label": "Temperatura colector admisión",
+      "source": 0
+    },
+    "battery_v": {
+      "value": 27.6,
+      "unit": "V",
+      "label": "Tensión batería",
+      "source": 0
+    },
+    "fuel_rate_lh": {
+      "value": 22.05,
+      "unit": "L/h",
+      "label": "Consumo instantáneo",
+      "source": 0
+    },
+    "fuel_level_pct": {
+      "value": 63.2,
+      "unit": "%",
+      "label": "Nivel combustible",
+      "source": 23
+    },
+    "ambient_c": {
+      "value": 14.5,
+      "unit": "°C",
+      "label": "Temperatura ambiente",
+      "source": 0
+    },
+    "hyd_oil_temp_c": {
+      "value": 63,
+      "unit": "°C",
+      "label": "Temperatura aceite hidráulico",
+      "source": 0
+    }
+  },
+  "tamper": {
+    "verdict": "manipulado",
+    "label": "Manipulación MUY PROBABLE",
+    "score": 55,
+    "checks": 3,
+    "reported_hours": 850.2,
+    "estimated_real_hours": 6421,
+    "machine_class": "trituradora",
+    "evidence": [
+      {
+        "title": "Horas distintas entre centralitas",
+        "detail": "Motor #1 (ECM): 850,2 h, Cuadro de instrumentos: 6.420,7 h. Diferencia de 5.570,5 h. Las centralitas cuentan las horas a la vez; una diferencia grande indica que una se ha rebajado o se ha cambiado una centralita.",
+        "weight": 55,
+        "level": "alta"
+      },
+      {
+        "title": "Régimen medio plausible",
+        "detail": "1.600 rpm de media de vida.",
+        "weight": 0,
+        "level": "ok"
+      },
+      {
+        "title": "Consumo medio coherente",
+        "detail": "38,0 L/h (Trituradora / biotrituradora: 15-70 L/h).",
+        "weight": 0,
+        "level": "ok"
+      }
+    ]
+  },
+  "modifications": {
+    "level": "alta",
+    "findings": [
+      {
+        "title": "Nº de serie distinto entre centralitas",
+        "level": "alta",
+        "detail": "Motor #1 (ECM): SIM-ARJ-OTRA-77, Cuadro de instrumentos: SIM-ARJ-00911. Una centralita procede de otra máquina (sustitución o 'trasplante', método habitual para reiniciar horas)."
+      }
+    ],
+    "note": "La reprogramación profesional puede no dejar rastro legible por J1939; confirmar con el software oficial si hay dudas."
+  },
+  "unknown_pgns": []
+}

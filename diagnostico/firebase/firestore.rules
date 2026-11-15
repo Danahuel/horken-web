@@ -1,0 +1,22 @@
+rules_version = '2';
+// Solo los correos de esta lista pueden ver y tocar los diagnósticos.
+// El programa del portátil usa una clave de servicio (Admin SDK) y no pasa por estas reglas.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function autorizado() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'TU_CORREO@gmail.com',
+          'CORREO_DEL_MECANICO@gmail.com'
+        ];
+    }
+
+    match /sessions/{id} {
+      allow read: if autorizado();
+      // Desde la app solo se pueden cambiar destinatarios y pedir el informe.
+      allow update: if autorizado()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipients', 'report_request']);
+    }
+  }
+}

@@ -1,0 +1,10 @@
+# Secretos: NUNCA subir
+motor_python/config.json
+motor_python/*clave*.json
+motor_python/*serviceAccount*.json
+app_flutter/android/app/google-services.json
+
+# Datos generados
+motor_python/sesiones/
+__pycache__/
+.pytest_cache/

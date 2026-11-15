@@ -1,0 +1,305 @@
+{
+  "session_id": "20261115-034240-01af",
+  "operator": "Taller",
+  "location": "Alemania",
+  "recipients": [],
+  "simulated": true,
+  "updated_at": "2026-11-15T03:42:51.131918+00:00",
+  "machine": {
+    "make": "HAMM",
+    "model": "H13i",
+    "serial": "SIM-H13-00042",
+    "unit": "R-03",
+    "brand_key": "hamm",
+    "brand_name": "Hamm (Wirtgen Group)",
+    "connector": "Conector de diagnóstico según serie (motor accesible por J1939)",
+    "official_software": "Herramienta de servicio Wirtgen/Hamm (WITOS / software de servicio del grupo)",
+    "brand_note": "El motor (habitualmente Deutz o Cummins según modelo) se diagnostica por J1939. El controlador de vibración/tracción usa mensajes propios de Hamm: se registran pero no todos se pueden interpretar.",
+    "machine_class": "rodillo",
+    "machine_class_label": "Rodillo compactador"
+  },
+  "lamps": {
+    "mil": false,
+    "red_stop": false,
+    "amber_warning": true,
+    "protect": false
+  },
+  "summary": {
+    "active_dtcs": 1,
+    "history_dtcs": 1,
+    "max_severity": 3,
+    "ecus": 2,
+    "frames": 259,
+    "repair_cost_min_eur": 98,
+    "repair_cost_max_eur": 1007
+  },
+  "dtcs": [
+    {
+      "code": "SPN 94 FMI 18",
+      "spn": 94,
+      "fmi": 18,
+      "active": true,
+      "occurrences": 1,
+      "source": 0,
+      "source_name": "Motor #1 (ECM)",
+      "name": "Presión de suministro de combustible (baja presión)",
+      "system": "Motor · Combustible",
+      "fmi_text": "Valor por debajo de lo normal (nivel moderado)",
+      "fault_type": "condicion",
+      "severity": 3,
+      "critical": false,
+      "warning": null,
+      "causes": [
+        "Filtros de combustible obstruidos (causa nº1)",
+        "Aire en el circuito / entrada de aire en tubería de aspiración",
+        "Bomba de transferencia/cebado defectuosa",
+        "Depósito casi vacío en pendiente"
+      ],
+      "steps": [
+        "Cambiar filtro primario (separador de agua) y secundario",
+        "Purgar el circuito con la bomba de cebado",
+        "Revisar racores y tubería de aspiración (burbujas)",
+        "Medir presión de baja con manómetro"
+      ],
+      "parts": [
+        {
+          "nombre": "Juego filtros de combustible",
+          "min": 40,
+          "max": 180
+        },
+        {
+          "nombre": "Bomba de transferencia eléctrica",
+          "min": 250,
+          "max": 900
+        }
+      ],
+      "difficulty": 2,
+      "labour_hours": 1.5,
+      "cost_min_eur": 98,
+      "cost_max_eur": 1007,
+      "known": true,
+      "proprietary": false,
+      "brand_note": "El motor (habitualmente Deutz o Cummins según modelo) se diagnostica por J1939. El controlador de vibración/tracción usa mensajes propios de Hamm: se registran pero no todos se pueden interpretar."
+    },
+    {
+      "code": "SPN 168 FMI 17",
+      "spn": 168,
+      "fmi": 17,
+      "active": false,
+      "occurrences": 2,
+      "source": 0,
+      "source_name": "Motor #1 (ECM)",
+      "name": "Tensión de batería / alimentación ECU",
+      "system": "Eléctrico",
+      "fmi_text": "Valor por debajo de lo normal (nivel leve)",
+      "fault_type": "condicion",
+      "severity": 2,
+      "critical": false,
+      "warning": null,
+      "causes": [
+        "Baterías descargadas o sulfatadas",
+        "Alternador defectuoso o correa floja",
+        "Bornes oxidados / masa defectuosa",
+        "Consumo parásito con la máquina parada"
+      ],
+      "steps": [
+        "Medir tensión con motor parado (12,6V por batería) y en marcha (27,5-28,5V en 24V)",
+        "Prueba de carga de baterías",
+        "Limpiar y apretar bornes y masas al chasis y motor",
+        "Comprobar salida del alternador"
+      ],
+      "parts": [
+        {
+          "nombre": "Batería 12V heavy duty (unidad)",
+          "min": 150,
+          "max": 350
+        },
+        {
+          "nombre": "Alternador 24V",
+          "min": 300,
+          "max": 1200
+        }
+      ],
+      "difficulty": 2,
+      "labour_hours": 1.5,
+      "cost_min_eur": 208,
+      "cost_max_eur": 1307,
+      "known": true,
+      "proprietary": false,
+      "brand_note": "El motor (habitualmente Deutz o Cummins según modelo) se diagnostica por J1939. El controlador de vibración/tracción usa mensajes propios de Hamm: se registran pero no todos se pueden interpretar."
+    }
+  ],
+  "ecus": [
+    {
+      "address": 0,
+      "address_hex": "0x00",
+      "name": "Motor #1 (ECM)",
+      "software": [
+        "SIM-DEUTZ-EMR4-1.2"
+      ],
+      "ecu_id": null,
+      "component": {
+        "make": "HAMM",
+        "model": "H13i",
+        "serial": "SIM-H13-00042",
+        "unit": "R-03"
+      },
+      "engine_hours": 3120.6,
+      "total_revolutions": 290216000.0,
+      "total_fuel_l": 29645.5,
+      "total_km": null,
+      "total_km_hr": null,
+      "active_dtcs": 1,
+      "history_dtcs": 1
+    },
+    {
+      "address": 23,
+      "address_hex": "0x17",
+      "name": "Cuadro de instrumentos",
+      "software": [
+        "SIM-HAMM-DSP-3.4"
+      ],
+      "ecu_id": null,
+      "component": {
+        "make": "HAMM",
+        "model": "H13i",
+        "serial": "SIM-H13-00042",
+        "unit": "R-03"
+      },
+      "engine_hours": 3120.4,
+      "total_revolutions": null,
+      "total_fuel_l": null,
+      "total_km": null,
+      "total_km_hr": null,
+      "active_dtcs": 0,
+      "history_dtcs": 0
+    }
+  ],
+  "live": {
+    "rpm": {
+      "value": 1785.125,
+      "unit": "rpm",
+      "label": "Régimen motor",
+      "source": 0
+    },
+    "torque_pct": {
+      "value": 74,
+      "unit": "%",
+      "label": "Par motor real",
+      "source": 0
+    },
+    "coolant_c": {
+      "value": 80,
+      "unit": "°C",
+      "label": "Temperatura refrigerante",
+      "source": 0
+    },
+    "fuel_temp_c": {
+      "value": 42,
+      "unit": "°C",
+      "label": "Temperatura combustible",
+      "source": 0
+    },
+    "oil_temp_c": {
+      "value": 86.344,
+      "unit": "°C",
+      "label": "Temperatura aceite motor",
+      "source": 0
+    },
+    "oil_level_pct": {
+      "value": 92.0,
+      "unit": "%",
+      "label": "Nivel aceite motor",
+      "source": 0
+    },
+    "oil_pressure_kpa": {
+      "value": 376.0,
+      "unit": "kPa",
+      "label": "Presión aceite motor",
+      "source": 0
+    },
+    "coolant_level_pct": {
+      "value": 94.8,
+      "unit": "%",
+      "label": "Nivel refrigerante",
+      "source": 0
+    },
+    "boost_kpa": {
+      "value": 180.0,
+      "unit": "kPa",
+      "label": "Presión de sobrealimentación",
+      "source": 0
+    },
+    "intake_temp_c": {
+      "value": 48,
+      "unit": "°C",
+      "label": "Temperatura colector admisión",
+      "source": 0
+    },
+    "battery_v": {
+      "value": 27.5,
+      "unit": "V",
+      "label": "Tensión batería",
+      "source": 0
+    },
+    "fuel_rate_lh": {
+      "value": 22.05,
+      "unit": "L/h",
+      "label": "Consumo instantáneo",
+      "source": 0
+    },
+    "fuel_level_pct": {
+      "value": 63.2,
+      "unit": "%",
+      "label": "Nivel combustible",
+      "source": 23
+    },
+    "ambient_c": {
+      "value": 14.5,
+      "unit": "°C",
+      "label": "Temperatura ambiente",
+      "source": 0
+    },
+    "hyd_oil_temp_c": {
+      "value": 61,
+      "unit": "°C",
+      "label": "Temperatura aceite hidráulico",
+      "source": 0
+    }
+  },
+  "tamper": {
+    "verdict": "ok",
+    "label": "Sin indicios de manipulación",
+    "score": 0,
+    "checks": 3,
+    "reported_hours": 3120.6,
+    "estimated_real_hours": null,
+    "machine_class": "rodillo",
+    "evidence": [
+      {
+        "title": "Horas coherentes entre centralitas",
+        "detail": "2 centralitas coinciden (diferencia 0,2 h).",
+        "weight": 0,
+        "level": "ok"
+      },
+      {
+        "title": "Régimen medio plausible",
+        "detail": "1.550 rpm de media de vida.",
+        "weight": 0,
+        "level": "ok"
+      },
+      {
+        "title": "Consumo medio coherente",
+        "detail": "9,5 L/h (Rodillo compactador: 4-16 L/h).",
+        "weight": 0,
+        "level": "ok"
+      }
+    ]
+  },
+  "modifications": {
+    "level": "ok",
+    "findings": [],
+    "note": "La reprogramación profesional puede no dejar rastro legible por J1939; confirmar con el software oficial si hay dudas."
+  },
+  "unknown_pgns": []
+}
