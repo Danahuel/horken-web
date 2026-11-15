@@ -1,0 +1,58 @@
+name: Medikktion
+
+# En cada cambio:
+#  1. pruebas del programa del portátil (Linux y Windows)
+#  2. compilación de la app Android (APK descargable en la pestaña "Actions")
+on:
+  push:
+    paths:
+      - "medikktion/**"
+      - ".github/workflows/medikktion.yml"
+  workflow_dispatch:
+
+jobs:
+  portatil:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONIOENCODING: utf-8
+    defaults:
+      run:
+        working-directory: medikktion/portatil
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pytest -q
+      - run: python -m medikktion demo --escenario fuchs --segundos 8 --carpeta sesiones
+
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: medikktion/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.50.0
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos
+      - run: flutter build apk --release
+      - run: cp build/app/outputs/flutter-apk/app-release.apk Medikktion.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Medikktion-android
+          path: medikktion/app/Medikktion.apk
+          retention-days: 90

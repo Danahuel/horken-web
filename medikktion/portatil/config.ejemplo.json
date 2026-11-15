@@ -1,0 +1,14 @@
+{
+  "_instrucciones": "Copiar como config.json (no se sube a git). Ver medikktion/README.md",
+  "firebase_credentials": "clave-servicio-firebase.json",
+  "operator": "Tu nombre",
+  "default_recipients": ["tu_correo@gmail.com"],
+  "labour_rate": 55,
+  "smtp": {
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "user": "tu_correo@gmail.com",
+    "password": "CONTRASEÑA_DE_APLICACION_DE_GOOGLE",
+    "from": "Medikktion Diagnóstico <tu_correo@gmail.com>"
+  }
+}
