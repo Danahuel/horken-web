@@ -19,7 +19,7 @@ El informe PDF se envía por email a los correos que elijáis.
 | `firebase/firestore.rules` | Reglas: solo vuestros dos correos pueden entrar |
 | `docs/` | Capturas e informe PDF de ejemplo |
 
-## 1. Probar YA, sin adaptador (Mac)
+## 1. Probar YA, sin adaptador (Windows o Mac)
 
 ```bash
 cd diagnostico/motor_python
@@ -27,8 +27,9 @@ python3 -m pip install -r requirements.txt
 python3 -m horken_diag demo --escenario cat320 --segundos 20   # Caterpillar con horas rebajadas
 python3 -m horken_diag demo --escenario arjes --segundos 20    # Arjes con centralita de otra máquina
 python3 -m horken_diag demo --escenario hamm --segundos 20     # Hamm sin manipulación
-python3 -m pytest -q                                           # 12 pruebas automáticas
+python3 -m pytest -q                                           # 15 pruebas automáticas
 ```
+En Windows usa `py` en lugar de `python3`, o directamente `diagnostico.bat` → opción 2.
 Genera `sesiones/<id>.json` y `sesiones/<id>.pdf`.
 
 La app sin Firebase arranca en **modo demostración** con esos mismos datos:
@@ -37,22 +38,32 @@ cd diagnostico/app_flutter
 flutter run -d chrome        # o con el móvil Android conectado: flutter run
 ```
 
-## 2. Adaptador (cuando decidas comprar)
+## 2. Portátil Windows + lector RP1210 (opción elegida)
 
-Funciona en **Mac**, no hace falta Windows:
+**Lector recomendado:** cualquiera compatible con **RP1210** (el estándar de diagnóstico de pesados en Windows):
 
-| Adaptador | Precio aprox. | Mac | Comando |
-|---|---|---|---|
-| PEAK PCAN-USB | 200–300 € | Sí (driver PCBUSB de mac-can.com) | `leer --interfaz pcan --canal PCAN_USBBUS1` |
-| CANable 2 / candleLight | 40–90 € | Sí | `leer --interfaz slcan --canal /dev/tty.usbmodemXXXX` |
-| Cable Deutsch 9 pines → DB9 (J1939) | 25–60 € | — | imprescindible con cualquiera de los dos |
+| Lector | Precio aprox. | Notas |
+|---|---|---|
+| Kit "USB-Link 2" compatible (clon de Nexiq 125032) | 80–200 € | Suele traer cables Deutsch de 9 pines (negro 250k y verde 500k), 6 pines y OBD2. Calidad variable: instalar solo el driver |
+| NEXIQ USB-Link 2/3 original | 800–1.100 € | Profesional, el más compatible |
+| DG Technologies DPA5 | 900–1.200 € | Profesional |
 
-Los adaptadores "RP1210" (Nexiq, Cat Comm Adapter) solo funcionan en Windows.
+Ventaja de Windows: el mismo lector sirve en el futuro para el software oficial (Cat ET, Deutz SerDia, etc.) si compras licencia.
 
-```bash
-python3 -m horken_diag leer --interfaz pcan --canal PCAN_USBBUS1 --bitrate 250000 --clase excavadora_20t
+**Instalación (una sola vez):**
+1. Instalar el driver del lector (crea `C:\Windows\RP121032.ini`).
+2. Instalar Python desde python.org y marcar *Add python.exe to PATH*.
+   Si el lector solo trae DLL de 32 bits (lo sabrás porque el programa te lo dirá), instala **Python de 32 bits (Windows installer x86)**.
+3. Doble clic en `motor_python\instalar_windows.bat`.
+
+**Uso:** doble clic en `motor_python\diagnostico.bat` → opción 1. Por línea de comandos:
+```bat
+py -m horken_diag adaptadores
+py -m horken_diag leer --interfaz rp1210 --canal NULN2R32 --dispositivo 1 --bitrate 0 --clase excavadora_20t
 ```
-Clases: `excavadora_20t, excavadora_grande, cargadora_ruedas, dumper_articulado, bulldozer, rodillo, trituradora, retro_mixta, minicargadora, camion`.
+`--bitrate 0` detecta la velocidad automáticamente. Si el lector no admite CAN en bruto, añade `--protocolo J1939`.
+
+Otros lectores que también funcionan (Windows y Mac): PEAK PCAN-USB (`--interfaz pcan`), CANable (`--interfaz slcan`), Kvaser (`--interfaz kvaser`).
 El programa **solo lee**. No escribe nada en las centralitas.
 
 ## 3. Firebase (gratis, plan Spark)

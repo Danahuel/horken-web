@@ -3,6 +3,8 @@
   python -m horken_diag demo --escenario cat320          # sin adaptador (simulador)
   python -m horken_diag leer --interfaz pcan --canal PCAN_USBBUS1
   python -m horken_diag leer --interfaz slcan --canal /dev/tty.usbmodem1101
+  python -m horken_diag adaptadores                       # Windows: lectores RP1210 instalados
+  python -m horken_diag leer --interfaz rp1210 --canal NULN2R32 --dispositivo 1
   python -m horken_diag interfaces
 """
 from __future__ import annotations
@@ -21,7 +23,8 @@ import can
 from . import collector, report, simulator
 from .sinks import FirestoreSink, LocalSink
 
-INTERFACES = """Adaptadores compatibles (python-can):
+INTERFACES = """Adaptadores compatibles:
+  rp1210    Nexiq USB-Link, DG DPA5, Noregon, Cat Comm Adapter, clones...   Windows   canal: nombre API (ver 'adaptadores')
   pcan      PEAK PCAN-USB            macOS (driver PCBUSB de mac-can.com), Windows, Linux
   slcan     CANable / USBtin (serie) macOS, Windows, Linux     canal: /dev/tty.usbmodemXXXX o COM3
   gs_usb    candleLight / CANable 2  macOS, Windows, Linux
@@ -115,13 +118,26 @@ def main(argv=None):
     r = sub.add_parser("leer", parents=[common], help="leer una máquina real")
     r.add_argument("--interfaz", required=True)
     r.add_argument("--canal", required=True)
-    r.add_argument("--bitrate", type=int, default=250000)
+    r.add_argument("--bitrate", type=int, default=250000, help="250000 (habitual), 500000, o 0 = automático (RP1210)")
+    r.add_argument("--dispositivo", type=int, default=1, help="RP1210: DeviceID (ver 'adaptadores')")
+    r.add_argument("--protocolo", default="CAN", choices=["CAN", "J1939"], help="RP1210: CAN en bruto o J1939")
     sub.add_parser("interfaces", help="adaptadores compatibles")
+    sub.add_parser("adaptadores", help="Windows: lista los lectores RP1210 instalados")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.WARNING)
 
     if args.cmd == "interfaces":
         print(INTERFACES)
+        return 0
+    if args.cmd == "adaptadores":
+        from .rp1210 import list_adapters
+        found = list_adapters()
+        if not found:
+            print("No hay adaptadores RP1210 instalados (falta C:\\Windows\\RP121032.ini). Instala el driver del lector.")
+        for a in found:
+            print(f"{a['vendor']}  →  --canal {a['api']}   protocolos: {', '.join(a['protocols']) or '?'}")
+            for d in a["devices"]:
+                print(f"      --dispositivo {d['id']}   {d['description']}")
         return 0
     cfg = load_config(args.config)
     Path(args.carpeta).mkdir(parents=True, exist_ok=True)
@@ -141,7 +157,12 @@ def main(argv=None):
             machine_bus.shutdown()
             tool_bus.shutdown()
     else:
-        with can.Bus(interface=args.interfaz, channel=args.canal, bitrate=args.bitrate) as bus:
+        if args.interfaz == "rp1210":
+            from .rp1210 import RP1210Bus
+            bus = RP1210Bus(args.canal, device_id=args.dispositivo, protocol=args.protocolo, bitrate=args.bitrate)
+        else:
+            bus = can.Bus(interface=args.interfaz, channel=args.canal, bitrate=args.bitrate)
+        with bus:
             run(bus, cfg, args)
     return 0
 
