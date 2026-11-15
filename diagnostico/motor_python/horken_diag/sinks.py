@@ -7,6 +7,8 @@ import threading
 from pathlib import Path
 from typing import Callable
 
+from .analysis import fingerprint
+
 log = logging.getLogger("horken.sink")
 
 
@@ -40,7 +42,7 @@ class LocalSink:
                 continue
             if d.get("machine", {}).get("serial") == serial and d.get("tamper", {}).get("reported_hours"):
                 hist.append({"date": d.get("updated_at", "")[:10], "engine_hours": d["tamper"]["reported_hours"]})
-                sw = {str(e["address"]): e.get("software", []) for e in d.get("ecus", [])}
+                sw = {str(e["address"]): fingerprint(e) for e in d.get("ecus", [])}
         return hist, sw
 
 
@@ -99,5 +101,5 @@ class FirestoreSink:
             h = x.get("tamper", {}).get("reported_hours")
             if h:
                 hist.append({"date": str(x.get("updated_at", ""))[:10], "engine_hours": h})
-                sw = {str(e["address"]): e.get("software", []) for e in x.get("ecus", [])}
+                sw = {str(e["address"]): fingerprint(e) for e in x.get("ecus", [])}
         return hist, sw

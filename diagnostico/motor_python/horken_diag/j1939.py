@@ -45,10 +45,11 @@ PGN_AT1T1 = 0xFE56            # 65110  Nivel AdBlue/DEF
 PGN_COMPONENT_ID = 0xFEEB     # 65259  Marca*Modelo*Nº serie*Unidad
 PGN_SOFTWARE_ID = 0xFEDA      # 65242  Versión de software
 PGN_ECU_ID = 0xFDC5           # 64965  Identificación de centralita
+PGN_DM19 = 0xD300             # 54016  Calibraciones (Cal ID + CVN): huella del software
 
 ON_REQUEST_PGNS = [
     PGN_COMPONENT_ID, PGN_SOFTWARE_ID, PGN_ECU_ID, PGN_HOURS,
-    PGN_VD, PGN_VDHR, PGN_LFC, PGN_DM2,
+    PGN_VD, PGN_VDHR, PGN_LFC, PGN_DM2, PGN_DM19,
 ]
 
 # Direcciones de origen preferentes (SAE J1939 tabla B2). Los fabricantes
@@ -344,3 +345,18 @@ def decode_software_id(payload: bytes) -> list[str]:
 def decode_ecu_id(payload: bytes) -> dict:
     f = decode_ascii_fields(payload) + [""] * 5
     return {"part_number": f[0], "serial": f[1], "location": f[2], "type": f[3], "manufacturer": f[4]}
+
+
+def decode_dm19(payload: bytes) -> list[dict]:
+    """DM19: bloques de 20 bytes = CVN (4 bytes) + Calibration ID (16 ASCII).
+    Si alguien reprograma la centralita, el CVN (checksum) cambia."""
+    out = []
+    for i in range(0, len(payload) - 19, 20):
+        cvn = int.from_bytes(payload[i:i + 4], "little")
+        cal = payload[i + 4:i + 20].decode("ascii", errors="replace").strip("\x00\xff ")
+        out.append({"cal_id": cal, "cvn": f"{cvn:08X}"})
+    return out
+
+
+def encode_dm19(cals: list[tuple[str, int]]) -> bytes:
+    return b"".join(cvn.to_bytes(4, "little") + cal.encode()[:16].ljust(16, b"\x00") for cal, cvn in cals)

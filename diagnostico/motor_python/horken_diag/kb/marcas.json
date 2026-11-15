@@ -1,31 +1,348 @@
 {
   "_nota": "Perfiles por marca. 'j1939' indica si el motor/máquina expone diagnóstico estándar J1939 en el conector. Lo propietario se lee solo en parte; para programar/calibrar hace falta el software oficial.",
-  "caterpillar": {"nombre": "Caterpillar", "alias": ["CAT", "CATERPILLAR"], "j1939": true,
+  "caterpillar": {
+    "nombre": "Caterpillar",
+    "alias": [
+      "CAT",
+      "CATERPILLAR"
+    ],
+    "j1939": true,
     "conector": "Deutsch 9 pines en cabina (J1939 + Cat Data Link en máquinas modernas)",
     "software_oficial": "Cat Electronic Technician (Cat ET) + adaptador Cat Comm Adapter III/IV",
-    "notas": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie."},
-  "hamm": {"nombre": "Hamm (Wirtgen Group)", "alias": ["HAMM"], "j1939": true,
+    "notas": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie."
+  },
+  "hamm": {
+    "nombre": "Hamm (Wirtgen Group)",
+    "alias": [
+      "HAMM"
+    ],
+    "j1939": true,
     "conector": "Conector de diagnóstico según serie (motor accesible por J1939)",
     "software_oficial": "Herramienta de servicio Wirtgen/Hamm (WITOS / software de servicio del grupo)",
-    "notas": "El motor (habitualmente Deutz o Cummins según modelo) se diagnostica por J1939. El controlador de vibración/tracción usa mensajes propios de Hamm: se registran pero no todos se pueden interpretar."},
-  "arjes": {"nombre": "Arjes", "alias": ["ARJES"], "j1939": true,
+    "notas": "El motor (habitualmente Deutz o Cummins según modelo) se diagnostica por J1939. El controlador de vibración/tracción usa mensajes propios de Hamm: se registran pero no todos se pueden interpretar."
+  },
+  "arjes": {
+    "nombre": "Arjes",
+    "alias": [
+      "ARJES"
+    ],
+    "j1939": true,
     "conector": "Según modelo; el motor industrial suele exponer J1939",
     "software_oficial": "Servicio técnico Arjes + software del fabricante del motor",
-    "notas": "Trituradoras: averías de motor por J1939. El control de rotores/hidráulico es propio de Arjes y se registra en bruto."},
-  "deutz": {"nombre": "Deutz", "alias": ["DEUTZ"], "j1939": true, "conector": "Deutsch 9 pines / conector EMR",
-    "software_oficial": "Deutz SerDia", "notas": "Motor de muchas máquinas compactas, rodillos y trituradoras."},
-  "cummins": {"nombre": "Cummins", "alias": ["CUMMINS"], "j1939": true, "conector": "Deutsch 9 pines",
-    "software_oficial": "Cummins INSITE", "notas": "Además de SPN/FMI usa 'Cummins Fault Codes' propios; la equivalencia se puede añadir a la base."},
-  "volvo": {"nombre": "Volvo CE", "alias": ["VOLVO"], "j1939": true, "conector": "Conector de servicio Volvo",
-    "software_oficial": "Volvo Tech Tool", "notas": "Máquinas antiguas usan J1708/J1587 (MID/PID), que requiere otro adaptador."},
-  "komatsu": {"nombre": "Komatsu", "alias": ["KOMATSU"], "j1939": true, "conector": "Según serie",
-    "software_oficial": "Komatsu KOMTRAX / herramienta de servicio", "notas": "Códigos de error propios en el monitor de cabina; el motor expone J1939 en series recientes."},
-  "liebherr": {"nombre": "Liebherr", "alias": ["LIEBHERR"], "j1939": true, "conector": "Según serie",
-    "software_oficial": "Liebherr SCULI / herramienta de servicio", "notas": "Gran parte del diagnóstico es propietario."},
-  "jcb": {"nombre": "JCB", "alias": ["JCB"], "j1939": true, "conector": "Según serie",
-    "software_oficial": "JCB ServiceMaster", "notas": "Motores JCB Dieselmax / EcoMax con J1939."},
-  "john_deere": {"nombre": "John Deere", "alias": ["JOHN DEERE", "DEERE", "JD"], "j1939": true, "conector": "Deutsch 9 pines",
-    "software_oficial": "John Deere Service ADVISOR", "notas": "Códigos propios ECU-SPN-FMI compatibles con J1939."},
-  "generico": {"nombre": "Genérico J1939", "alias": [], "j1939": true, "conector": "Deutsch 9 pines (J1939)",
-    "software_oficial": "-", "notas": "Marca no identificada: se usa el estándar J1939."}
+    "notas": "Trituradoras: averías de motor por J1939. El control de rotores/hidráulico es propio de Arjes y se registra en bruto."
+  },
+  "deutz": {
+    "nombre": "Deutz",
+    "alias": [
+      "DEUTZ"
+    ],
+    "j1939": true,
+    "conector": "Deutsch 9 pines / conector EMR",
+    "software_oficial": "Deutz SerDia",
+    "notas": "Motor de muchas máquinas compactas, rodillos y trituradoras."
+  },
+  "cummins": {
+    "nombre": "Cummins",
+    "alias": [
+      "CUMMINS"
+    ],
+    "j1939": true,
+    "conector": "Deutsch 9 pines",
+    "software_oficial": "Cummins INSITE",
+    "notas": "Además de SPN/FMI usa 'Cummins Fault Codes' propios; la equivalencia se puede añadir a la base."
+  },
+  "volvo": {
+    "nombre": "Volvo CE",
+    "alias": [
+      "VOLVO"
+    ],
+    "j1939": true,
+    "conector": "Conector de servicio Volvo",
+    "software_oficial": "Volvo Tech Tool",
+    "notas": "Máquinas antiguas usan J1708/J1587 (MID/PID), que requiere otro adaptador."
+  },
+  "komatsu": {
+    "nombre": "Komatsu",
+    "alias": [
+      "KOMATSU"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Komatsu KOMTRAX / herramienta de servicio",
+    "notas": "Códigos de error propios en el monitor de cabina; el motor expone J1939 en series recientes."
+  },
+  "liebherr": {
+    "nombre": "Liebherr",
+    "alias": [
+      "LIEBHERR"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Liebherr SCULI / herramienta de servicio",
+    "notas": "Gran parte del diagnóstico es propietario."
+  },
+  "jcb": {
+    "nombre": "JCB",
+    "alias": [
+      "JCB"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "JCB ServiceMaster",
+    "notas": "Motores JCB Dieselmax / EcoMax con J1939."
+  },
+  "john_deere": {
+    "nombre": "John Deere",
+    "alias": [
+      "JOHN DEERE",
+      "DEERE",
+      "JD"
+    ],
+    "j1939": true,
+    "conector": "Deutsch 9 pines",
+    "software_oficial": "John Deere Service ADVISOR",
+    "notas": "Códigos propios ECU-SPN-FMI compatibles con J1939."
+  },
+  "fuchs": {
+    "nombre": "Fuchs (Terex Fuchs)",
+    "alias": [
+      "FUCHS",
+      "TEREX FUCHS"
+    ],
+    "j1939": true,
+    "conector": "Conector de diagnóstico en cabina (motor por J1939)",
+    "software_oficial": "Herramienta de servicio Fuchs + software del fabricante del motor",
+    "notas": "Manipuladoras de material MHL: motor habitualmente Deutz (según serie), diagnóstico de motor por J1939. El control de máquina (hidráulico, cabina elevable, giro) es propio de Fuchs: se registra y, en series nuevas, puede responder a UDS."
+  },
+  "sennebogen": {
+    "nombre": "Sennebogen",
+    "alias": [
+      "SENNEBOGEN"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Herramienta de servicio Sennebogen",
+    "notas": "Manipuladoras y grúas; motor Cummins o Deutz según serie por J1939."
+  },
+  "bomag": {
+    "nombre": "Bomag",
+    "alias": [
+      "BOMAG"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "BOMAG BEST (herramienta de servicio)",
+    "notas": "Rodillos y fresadoras; motor Deutz/Kubota/Cummins por J1939 según modelo."
+  },
+  "dynapac": {
+    "nombre": "Dynapac",
+    "alias": [
+      "DYNAPAC"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Herramienta de servicio Dynapac",
+    "notas": "Rodillos y extendedoras; motor por J1939."
+  },
+  "wirtgen": {
+    "nombre": "Wirtgen / Vögele / Kleemann",
+    "alias": [
+      "WIRTGEN",
+      "VOGELE",
+      "VÖGELE",
+      "KLEEMANN"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "WITOS / herramientas del grupo Wirtgen",
+    "notas": "Mismo grupo que Hamm; motor por J1939, controlador de máquina propietario."
+  },
+  "doosan": {
+    "nombre": "Doosan / Develon",
+    "alias": [
+      "DOOSAN",
+      "DEVELON"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Herramienta de servicio Develon",
+    "notas": "Motor Doosan/Perkins/Cummins por J1939 según modelo."
+  },
+  "hyundai": {
+    "nombre": "Hyundai CE / HD Hyundai",
+    "alias": [
+      "HYUNDAI"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Herramienta de servicio Hyundai CE",
+    "notas": "Motor Cummins/Perkins/Hyundai por J1939."
+  },
+  "hitachi": {
+    "nombre": "Hitachi",
+    "alias": [
+      "HITACHI"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Hitachi Dr. ZX",
+    "notas": "Motor Isuzu/Cummins; parte del diagnóstico es propietario."
+  },
+  "kubota": {
+    "nombre": "Kubota",
+    "alias": [
+      "KUBOTA"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Kubota Diagmaster",
+    "notas": "Minimáquinas; motores Kubota con J1939 en versiones con common rail."
+  },
+  "takeuchi": {
+    "nombre": "Takeuchi",
+    "alias": [
+      "TAKEUCHI"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Herramienta de servicio Takeuchi",
+    "notas": "Minimáquinas; motor Yanmar/Kubota."
+  },
+  "yanmar": {
+    "nombre": "Yanmar",
+    "alias": [
+      "YANMAR"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Yanmar SMARTASSIST Direct",
+    "notas": "Motores TNV con common rail por J1939."
+  },
+  "wacker": {
+    "nombre": "Wacker Neuson / Kramer",
+    "alias": [
+      "WACKER",
+      "KRAMER",
+      "NEUSON"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Herramienta de servicio Wacker Neuson",
+    "notas": "Compactas; motor Perkins/Deutz/Yanmar/Kubota."
+  },
+  "manitou": {
+    "nombre": "Manitou",
+    "alias": [
+      "MANITOU"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Manitou EasyManager / diagnóstico",
+    "notas": "Telescópicas; motor Deutz/Perkins/Kohler por J1939."
+  },
+  "merlo": {
+    "nombre": "Merlo",
+    "alias": [
+      "MERLO"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Herramienta de servicio Merlo",
+    "notas": "Telescópicas; motor Deutz/Kohler/FPT por J1939."
+  },
+  "bobcat": {
+    "nombre": "Bobcat",
+    "alias": [
+      "BOBCAT"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "Bobcat Service Analyzer",
+    "notas": "Minicargadoras y miniexcavadoras."
+  },
+  "case_nh": {
+    "nombre": "CASE / New Holland (FPT)",
+    "alias": [
+      "CASE",
+      "NEW HOLLAND",
+      "FPT"
+    ],
+    "j1939": true,
+    "conector": "Según serie",
+    "software_oficial": "CNH Electronic Service Tools (EST)",
+    "notas": "Motores FPT por J1939."
+  },
+  "perkins": {
+    "nombre": "Perkins",
+    "alias": [
+      "PERKINS"
+    ],
+    "j1939": true,
+    "conector": "Deutsch 9 pines",
+    "software_oficial": "Perkins EST",
+    "notas": "Motor de muchas marcas (JCB antiguas, Manitou, Doosan, Caterpillar compactas)."
+  },
+  "keestrack": {
+    "nombre": "Keestrack / Metso / Sandvik (machacadoras)",
+    "alias": [
+      "KEESTRACK",
+      "METSO",
+      "SANDVIK",
+      "POWERSCREEN",
+      "KLEEMANN"
+    ],
+    "j1939": true,
+    "conector": "Según modelo",
+    "software_oficial": "Herramienta del fabricante",
+    "notas": "Machacadoras y cribas: motor por J1939; control de planta propietario."
+  },
+  "doppstadt": {
+    "nombre": "Doppstadt / Komptech / Jenz / Willibald / Vermeer (trituradoras)",
+    "alias": [
+      "DOPPSTADT",
+      "KOMPTECH",
+      "JENZ",
+      "WILLIBALD",
+      "VERMEER",
+      "MORBARK"
+    ],
+    "j1939": true,
+    "conector": "Según modelo",
+    "software_oficial": "Herramienta del fabricante",
+    "notas": "Trituradoras/biotrituradoras como Arjes: motor por J1939 (Cat, Volvo, MTU, Deutz según modelo); control del rotor propietario."
+  },
+  "mtu": {
+    "nombre": "MTU / Rolls-Royce Power Systems",
+    "alias": [
+      "MTU"
+    ],
+    "j1939": true,
+    "conector": "Según instalación",
+    "software_oficial": "MTU DiaSys",
+    "notas": "Motores grandes de trituradoras, grupos y maquinaria."
+  },
+  "camion_eu": {
+    "nombre": "Camiones (MAN, Mercedes, Scania, DAF, Iveco, Renault)",
+    "alias": [
+      "MAN",
+      "MERCEDES",
+      "DAIMLER",
+      "SCANIA",
+      "DAF",
+      "IVECO",
+      "RENAULT TRUCKS"
+    ],
+    "j1939": true,
+    "conector": "Conector OBD de 16 pines (camiones Euro VI) o conector de la marca",
+    "software_oficial": "MAN-cats / Xentry / SDP3 / DAVIE / E.A.SY",
+    "notas": "Motor y transmisión por J1939; carrocería por UDS. Usar también el modo UDS."
+  },
+  "generico": {
+    "nombre": "Genérico J1939",
+    "alias": [],
+    "j1939": true,
+    "conector": "Deutsch 9 pines (J1939)",
+    "software_oficial": "-",
+    "notas": "Marca no identificada: se usa el estándar J1939."
+  }
 }

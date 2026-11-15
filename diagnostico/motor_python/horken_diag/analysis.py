@@ -25,6 +25,8 @@ MACHINE_CLASSES = {
     "retro_mixta": ("Retrocargadora mixta", 4, 12),
     "minicargadora": ("Minicargadora / minipala", 3, 10),
     "camion": ("Camión", 10, 45),
+    "coche": ("Coche / furgoneta", 0.5, 15),
+    "manipuladora": ("Manipuladora de material (Fuchs, Sennebogen...)", 10, 35),
     "generica": ("Máquina (clase no indicada)", 2, 80),
 }
 
@@ -41,12 +43,13 @@ def _ev(title, detail, weight, level):
     return {"title": title, "detail": detail, "weight": weight, "level": level}
 
 
-def analyze_counters(ecus: dict, machine_class: str = "generica", history: list[dict] | None = None) -> dict:
+def analyze_counters(ecus: dict, machine_class: str = "generica", history: list[dict] | None = None,
+                     extra_evidence: list[dict] | None = None) -> dict:
     """``ecus``: {sa: {"name", "engine_hours", "total_revolutions", "total_fuel_l", "total_km", "total_km_hr"}}."""
     evidence, checks = [], 0
     hours = {sa: e["engine_hours"] for sa, e in ecus.items() if e.get("engine_hours") is not None}
-    names = {sa: e.get("name", f"0x{sa:02X}") for sa, e in ecus.items()}
-    ref_sa = 0 if 0 in hours else (min(hours) if hours else None)
+    names = {sa: e.get("name") or str(sa) for sa, e in ecus.items()}
+    ref_sa = 0 if 0 in hours else (sorted(hours, key=str)[0] if hours else None)
     ref_hours = hours.get(ref_sa) if ref_sa is not None else None
 
     # 1. Horas entre centralitas
@@ -131,6 +134,9 @@ def analyze_counters(ecus: dict, machine_class: str = "generica", history: list[
                                 f"{_n(ref_hours, 1)} h. Prueba directa de manipulación o cambio de centralita.",
                                 100, "alta"))
 
+    if extra_evidence:
+        evidence.extend(extra_evidence)
+        checks += len(extra_evidence)
     score = min(100, sum(e["weight"] for e in evidence))
     if checks == 0:
         verdict, label_v = "sin_datos", "Datos insuficientes"
@@ -151,6 +157,11 @@ def analyze_counters(ecus: dict, machine_class: str = "generica", history: list[
             "machine_class": machine_class, "evidence": evidence}
 
 
+def fingerprint(ecu: dict) -> list[str]:
+    """Software + calibraciones (DM19) de una centralita: si cambia entre revisiones, se ha reprogramado."""
+    return list(ecu.get("software") or []) + [f"CAL {c['cal_id']} CVN {c['cvn']}" for c in ecu.get("calibrations") or []]
+
+
 def analyze_modifications(ecus: dict, previous_software: dict | None = None) -> dict:
     """Busca centralitas cambiadas o software modificado."""
     findings = []
@@ -162,8 +173,9 @@ def analyze_modifications(ecus: dict, previous_software: dict | None = None) -> 
                          "detail": f"{listing}. Una centralita procede de otra máquina (sustitución o "
                                    "'trasplante', método habitual para reiniciar horas)."})
     for sa, e in ecus.items():
-        sw = e.get("software") or []
-        if previous_software and str(sa) in previous_software and previous_software[str(sa)] != sw:
+        sw = fingerprint(e)
+        if previous_software and str(sa) in previous_software and previous_software[str(sa)] and sw \
+                and previous_software[str(sa)] != sw:
             findings.append({"title": f"Software cambiado en {e.get('name')}", "level": "media",
                              "detail": f"Antes: {previous_software[str(sa)]} → ahora: {sw}. Puede ser una "
                                        "actualización oficial o una reprogramación (chip/tuning)."})

@@ -62,8 +62,37 @@ def fmi_table() -> dict:
     return {k: v for k, v in _load("fmi.json").items() if not k.startswith("_")}
 
 
+SYSTEM_STEPS = {
+    "Emisiones": ["Revisar si hay otras averías de emisiones activas: suelen ir encadenadas",
+                  "Comprobar la sonda/componente con la prueba del fabricante",
+                  "Revisar fugas de escape y conectores expuestos al calor"],
+    "Electrónica": ["Comprobar alimentaciones y masas en el conector de la centralita",
+                    "Desconectar sensores de uno en uno: el que hace desaparecer el código es el culpable",
+                    "Si persiste, consultar al servicio oficial (puede requerir programación)"],
+    "Transmisión": ["Comprobar nivel y estado del aceite de transmisión", "Revisar filtros y enfriador",
+                    "Leer presiones con manómetro según el manual"],
+}
+GENERIC_COND_STEPS = ["Verificar el valor real con un instrumento independiente (manómetro, termómetro, polímetro)",
+                      "Revisar el componente indicado y su entorno (fugas, suciedad, daños)",
+                      "Borrar el código y repetir una prueba de trabajo para confirmar"]
+
+
+def _expand(spn: str, row: list) -> dict:
+    name, system, part, pmin, pmax, diff, crit = row
+    if part == "inyector":
+        return {"nombre": name, "sistema": system, "critico": False, "familia": "inyector"}
+    parts = [] if part in ("—", "") or pmax == 0 else [{"nombre": part, "min": pmin, "max": pmax}]
+    steps = next((v for k, v in SYSTEM_STEPS.items() if system.startswith(k)), GENERIC_COND_STEPS)
+    return {"nombre": name, "sistema": system, "critico": bool(crit),
+            "electrico": {"piezas": parts[:1] if parts and pmax < 1000 else [], "dificultad": min(diff, 3), "horas_mo": 1.0},
+            "condicion": {"causas": [], "pasos": steps, "piezas": parts, "dificultad": diff, "horas_mo": 1.5 + diff * 0.5}}
+
+
+@lru_cache
 def spn_table() -> dict:
-    return {k: v for k, v in _load("spn.json").items() if not k.startswith("_")}
+    table = {k: _expand(k, v) for k, v in _load("spn_extra.json").items() if not k.startswith("_")}
+    table.update({k: v for k, v in _load("spn.json").items() if not k.startswith("_")})
+    return table
 
 
 def brands() -> dict:
@@ -71,9 +100,11 @@ def brands() -> dict:
 
 
 def detect_brand(make: str | None) -> str:
-    m = (make or "").upper()
+    """Marca por palabras completas ("MAN" no confunde con "MANITOU")."""
+    import re
+    m = " " + " ".join(re.findall(r"[A-ZÄÖÜ0-9]+", (make or "").upper())) + " "
     for key, b in brands().items():
-        if any(alias in m for alias in b["alias"]):
+        if any(f" {alias} " in m for alias in b["alias"]):
             return key
     return "generico"
 

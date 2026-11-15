@@ -11,6 +11,7 @@ import threading
 import time
 
 import can
+import isotp
 
 from . import j1939
 from .j1939 import J1939Id, Lamps
@@ -32,6 +33,7 @@ SCENARIOS = {
             0x00: {"component": "CAT*320*SIM0001234*FLOTA-07*", "software": ["SIM-ENG-5432109-00", "SIM-FLASH-2023"],
                    "ecu_id": "SIM-472-1234*SIMECU001*MOTOR*ECM*CATERPILLAR*",
                    "hours": 4213.4, "revs": 829_600_000, "fuel": 148_100,
+                   "dm19": [("SIM-CAL-C7.1-A07", 0x5A3C91E2)],
                    "dm1": [(651, 5, 3), (100, 18, 2)], "lamps": Lamps(amber_warning=1),
                    "dm2": [(97, 15, 12), (168, 18, 4), (3719, 16, 7)]},
             0x3D: {"software": ["SIM-ATC-3311-02"], "dm1": [(4364, 18, 5), (3226, 2, 1)],
@@ -43,6 +45,21 @@ SCENARIOS = {
                    "dm2": []},
         },
         "live": {"oil_pressure_kpa": 150, "coolant_c": 96, "hyd_oil_temp_c": 94},
+    },
+    "fuchs": {
+        "descripcion": "Fuchs MHL (manipuladora) con motor Deutz por J1939 y controlador de máquina UDS",
+        "machine_class": "manipuladora",
+        "ecus": {
+            0x00: {"component": "FUCHS*MHL350*SIM-MHL-03521*GRUA-2*", "software": ["SIM-DEUTZ-EMR5-4.03"],
+                   "hours": 7340.5, "revs": 7340.5 * 60 * 1450, "fuel": 7340.5 * 19,
+                   "dm19": [("SIM-DEUTZ-TCD6.1", 0x1F22A0B7)],
+                   "dm1": [(3719, 16, 3)], "lamps": Lamps(amber_warning=1), "dm2": [(110, 16, 2)]},
+            0x17: {"component": "FUCHS*MHL350*SIM-MHL-03521*GRUA-2*", "software": ["SIM-FUCHS-DSP-7.2"],
+                   "hours": 7341.1, "dm1": [], "dm2": []},
+        },
+        "uds": [{"addr": 0x27, "dtcs": [(0x91A413, 0x09), (0xC07388, 0x08)],
+                 "dids": {0xF190: "SIMFUCHSMHL350X21", 0xF188: "SIM-MHL-CTRL-3.11", 0xF197: "Control maquina"}}],
+        "live": {"oil_pressure_kpa": 360, "coolant_c": 88, "hyd_oil_temp_c": 71},
     },
     "hamm": {
         "descripcion": "Rodillo Hamm sin manipulación, 1 avería leve de combustible",
@@ -151,6 +168,8 @@ class SimulatedMachine:
             self._send(pgn, sa, _u(e["hours"] / 0.05, 4) + (_u(revs / 1000, 4) if revs else b"\xFF" * 4))
         elif pgn == j1939.PGN_LFC and e.get("fuel"):
             self._send(pgn, sa, _u(30 / 0.5, 4) + _u(e["fuel"] / 0.5, 4))
+        elif pgn == j1939.PGN_DM19 and e.get("dm19"):
+            self._send(pgn, sa, j1939.encode_dm19(e["dm19"]))
         elif pgn == j1939.PGN_DM2:
             self._send(pgn, sa, self._dm(sa, "dm2"))
 
@@ -175,3 +194,49 @@ class SimulatedMachine:
         self._stop.set()
         for t in self._threads:
             t.join(timeout=1)
+
+
+class SimulatedUdsEcu:
+    """Centralita UDS mínima (0x19 averías, 0x22 identificación, 0x3E) sobre ISO-TP."""
+
+    def __init__(self, bus: can.BusABC, address: int, dtcs, dids: dict, tester: int = 0xF9):
+        self.bus, self.dtcs, self.dids = bus, dtcs, dids
+        self.notifier = can.Notifier(bus, [], timeout=0.1)
+        addr = isotp.Address(isotp.AddressingMode.NormalFixed_29bits, source_address=address, target_address=tester)
+        self.stack = isotp.NotifierBasedCanStack(bus, self.notifier, address=addr,
+                                                 params={"tx_data_min_length": 8, "blocking_send": False})
+        self._stop = threading.Event()
+        self._t = threading.Thread(target=self._loop, daemon=True)
+
+    def _answer(self, req: bytes) -> bytes:
+        sid = req[0]
+        if sid == 0x19 and len(req) >= 3 and req[1] == 0x02:
+            out = bytearray([0x59, 0x02, 0xFF])
+            for code, status in self.dtcs:
+                if status & req[2]:
+                    out += code.to_bytes(3, "big") + bytes([status])
+            return bytes(out)
+        if sid == 0x22 and len(req) >= 3:
+            did = req[1] << 8 | req[2]
+            if did in self.dids:
+                return bytes([0x62, req[1], req[2]]) + self.dids[did].encode()
+            return bytes([0x7F, 0x22, 0x31])
+        if sid == 0x3E:
+            return bytes([0x7E, 0x00])
+        return bytes([0x7F, sid, 0x11])
+
+    def _loop(self):
+        while not self._stop.is_set():
+            req = self.stack.recv(block=True, timeout=0.1)
+            if req:
+                self.stack.send(self._answer(bytes(req)))
+
+    def start(self):
+        self.stack.start()
+        self._t.start()
+
+    def stop(self):
+        self._stop.set()
+        self._t.join(timeout=1)
+        self.stack.stop()
+        self.notifier.stop()

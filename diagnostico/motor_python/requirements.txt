@@ -1,4 +1,11 @@
-python-can>=4.4
+# Bus CAN y protocolos
+python-can>=4.4        # bus CAN (PCAN, Kvaser, CANable, Vector, virtual...)
+can-isotp>=2.0         # ISO-TP (transporte de UDS)
+udsoncan>=1.23         # UDS ISO 14229 (centralitas modernas)
+obd>=0.7.2             # OBD-II con ELM327 (+2.000 códigos SAE)
+cantools>=39           # archivos DBC del fabricante
+pyserial>=3.5          # ELM327 / adaptadores serie
+# Informe, nube y pruebas
 reportlab>=4.0
 firebase-admin>=6.5
 pytest>=8.0
