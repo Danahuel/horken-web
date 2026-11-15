@@ -20,6 +20,12 @@ class Session {
   List<Map<String, dynamic>> get ecus => _l('ecus');
   List<String> get recipients => ((raw['recipients'] as List?) ?? []).map((e) => '$e').toList();
 
+  List<String> get protocols => ((raw['protocols'] as List?) ?? []).map((e) => '$e').toList();
+  String get shortId {
+    final id = '${raw['session_id'] ?? this.id}';
+    return id.length >= 13 ? '${id.substring(4, 8)}-${id.substring(9, 13)}' : id;
+  }
+
   bool get isLive => raw['status'] == 'live';
   bool get simulated => raw['simulated'] == true;
   String get operator => '${raw['operator'] ?? ''}';
@@ -52,3 +58,20 @@ String fmtNum(dynamic v, {int decimals = 1}) {
   final sign = parts[0].startsWith('-') ? '-' : '';
   return decimals > 0 ? '$sign$buf,${parts[1]}' : '$sign$buf';
 }
+
+const _months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+String hhmm(DateTime d) => '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
+/// "hoy 09:41", "ayer 18:02", "3 nov 10:15"
+String whenText(DateTime? d) {
+  if (d == null) return '';
+  final now = DateTime.now();
+  final day = DateTime(d.year, d.month, d.day);
+  final diff = DateTime(now.year, now.month, now.day).difference(day).inDays;
+  if (diff == 0) return 'hoy ${hhmm(d)}';
+  if (diff == 1) return 'ayer ${hhmm(d)}';
+  return '${d.day} ${_months[d.month - 1]}${d.year != now.year ? ' ${d.year}' : ''} ${hhmm(d)}';
+}
+
+String euros(dynamic a, dynamic b) => '${fmtNum(a, decimals: 0)}–${fmtNum(b, decimals: 0)} €';

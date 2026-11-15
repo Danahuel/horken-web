@@ -1,15 +1,16 @@
 {
-  "session_id": "20261115-034229-5857",
+  "session_id": "20261115-103838-ee5a",
   "operator": "Taller",
-  "location": "Alemania",
+  "location": "Múnich",
   "recipients": [],
   "simulated": true,
-  "updated_at": "2026-11-15T03:42:40.468979+00:00",
+  "updated_at": "2026-11-15T10:38:49.346059+00:00",
   "machine": {
     "make": "CAT",
     "model": "320",
     "serial": "SIM0001234",
     "unit": "FLOTA-07",
+    "vin": "",
     "brand_key": "caterpillar",
     "brand_name": "Caterpillar",
     "connector": "Deutsch 9 pines en cabina (J1939 + Cat Data Link en máquinas modernas)",
@@ -24,12 +25,16 @@
     "amber_warning": true,
     "protect": false
   },
+  "protocols": [
+    "J1939"
+  ],
+  "notes": [],
   "summary": {
     "active_dtcs": 6,
     "history_dtcs": 4,
     "max_severity": 5,
     "ecus": 4,
-    "frames": 373,
+    "frames": 384,
     "repair_cost_min_eur": 1538,
     "repair_cost_max_eur": 13851
   },
@@ -81,45 +86,8 @@
       "cost_max_eur": 2372,
       "known": true,
       "proprietary": false,
-      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie."
-    },
-    {
-      "code": "SPN 651 FMI 5",
-      "spn": 651,
-      "fmi": 5,
-      "active": true,
-      "occurrences": 3,
-      "source": 0,
-      "source_name": "Motor #1 (ECM)",
-      "name": "Inyector cilindro 1",
-      "system": "Motor · Inyectores",
-      "fmi_text": "Corriente por debajo de lo normal o circuito abierto",
-      "fault_type": "electrico",
-      "severity": 3,
-      "critical": false,
-      "warning": null,
-      "causes": [
-        "Fallo de circuito: cableado, conector o el propio sensor/actuador"
-      ],
-      "steps": [
-        "Comprobar continuidad de cada cable entre la ECU y el componente (circuito abierto)",
-        "Medir la resistencia del componente (bobina/solenoide) y comparar con la especificación",
-        "Revisar conectores sueltos o terminales abiertos"
-      ],
-      "parts": [
-        {
-          "nombre": "Revisión mazo de inyectores (bajo tapa de balancines)",
-          "min": 0,
-          "max": 150
-        }
-      ],
-      "difficulty": 3,
-      "labour_hours": 3.0,
-      "cost_min_eur": 115,
-      "cost_max_eur": 364,
-      "known": true,
-      "proprietary": false,
-      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie."
+      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie.",
+      "protocol": "J1939"
     },
     {
       "code": "SPN 1638 FMI 16",
@@ -167,7 +135,8 @@
       "cost_max_eur": 2786,
       "known": true,
       "proprietary": false,
-      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie."
+      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie.",
+      "protocol": "J1939"
     },
     {
       "code": "SPN 3226 FMI 2",
@@ -205,7 +174,8 @@
       "cost_max_eur": 972,
       "known": true,
       "proprietary": false,
-      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie."
+      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie.",
+      "protocol": "J1939"
     },
     {
       "code": "SPN 4364 FMI 18",
@@ -252,7 +222,8 @@
       "cost_max_eur": 7214,
       "known": true,
       "proprietary": false,
-      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie."
+      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie.",
+      "protocol": "J1939"
     },
     {
       "code": "SPN 520210 FMI 2",
@@ -285,7 +256,47 @@
       "cost_max_eur": 143,
       "known": false,
       "proprietary": true,
-      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie."
+      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie.",
+      "protocol": "J1939"
+    },
+    {
+      "code": "SPN 651 FMI 5",
+      "spn": 651,
+      "fmi": 5,
+      "active": true,
+      "occurrences": 3,
+      "source": 0,
+      "source_name": "Motor #1 (ECM)",
+      "name": "Inyector cilindro 1",
+      "system": "Motor · Inyectores",
+      "fmi_text": "Corriente por debajo de lo normal o circuito abierto",
+      "fault_type": "electrico",
+      "severity": 3,
+      "critical": false,
+      "warning": null,
+      "causes": [
+        "Fallo de circuito: cableado, conector o el propio sensor/actuador"
+      ],
+      "steps": [
+        "Comprobar continuidad de cada cable entre la ECU y el componente (circuito abierto)",
+        "Medir la resistencia del componente (bobina/solenoide) y comparar con la especificación",
+        "Revisar conectores sueltos o terminales abiertos"
+      ],
+      "parts": [
+        {
+          "nombre": "Revisión mazo de inyectores (bajo tapa de balancines)",
+          "min": 0,
+          "max": 150
+        }
+      ],
+      "difficulty": 3,
+      "labour_hours": 3.0,
+      "cost_min_eur": 115,
+      "cost_max_eur": 364,
+      "known": true,
+      "proprietary": false,
+      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie.",
+      "protocol": "J1939"
     },
     {
       "code": "SPN 168 FMI 18",
@@ -332,7 +343,8 @@
       "cost_max_eur": 1307,
       "known": true,
       "proprietary": false,
-      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie."
+      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie.",
+      "protocol": "J1939"
     },
     {
       "code": "SPN 3364 FMI 18",
@@ -370,7 +382,8 @@
       "cost_max_eur": 147,
       "known": true,
       "proprietary": false,
-      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie."
+      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie.",
+      "protocol": "J1939"
     },
     {
       "code": "SPN 3719 FMI 16",
@@ -410,7 +423,8 @@
       "cost_max_eur": 807,
       "known": true,
       "proprietary": false,
-      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie."
+      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie.",
+      "protocol": "J1939"
     },
     {
       "code": "SPN 97 FMI 15",
@@ -450,7 +464,8 @@
       "cost_max_eur": 146,
       "known": true,
       "proprietary": false,
-      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie."
+      "brand_note": "Motores Tier 4/Stage IV-V: averías en SPN/FMI estándar. Los 'eventos' (códigos E###) y los MID/CID de Cat Data Link son propietarios: se muestran en bruto si se reciben. Referencias de pieza: Cat SIS por número de serie.",
+      "protocol": "J1939"
     }
   ],
   "ecus": [
@@ -458,6 +473,7 @@
       "address": 0,
       "address_hex": "0x00",
       "name": "Motor #1 (ECM)",
+      "protocol": "J1939",
       "software": [
         "SIM-ENG-5432109-00",
         "SIM-FLASH-2023"
@@ -475,6 +491,13 @@
         "serial": "SIM0001234",
         "unit": "FLOTA-07"
       },
+      "calibrations": [
+        {
+          "cal_id": "SIM-CAL-C7.1-A07",
+          "cvn": "5A3C91E2"
+        }
+      ],
+      "vin": null,
       "engine_hours": 4213.4,
       "total_revolutions": 829600000.0,
       "total_fuel_l": 148100.0,
@@ -487,6 +510,7 @@
       "address": 23,
       "address_hex": "0x17",
       "name": "Cuadro de instrumentos",
+      "protocol": "J1939",
       "software": [
         "SIM-MON-8812-01"
       ],
@@ -497,6 +521,8 @@
         "serial": "SIM0001234",
         "unit": "FLOTA-07"
       },
+      "calibrations": [],
+      "vin": null,
       "engine_hours": 9876.2,
       "total_revolutions": null,
       "total_fuel_l": null,
@@ -509,11 +535,14 @@
       "address": 61,
       "address_hex": "0x3D",
       "name": "Postratamiento escape #1 (DPF/SCR)",
+      "protocol": "J1939",
       "software": [
         "SIM-ATC-3311-02"
       ],
       "ecu_id": null,
       "component": null,
+      "calibrations": [],
+      "vin": null,
       "engine_hours": null,
       "total_revolutions": null,
       "total_fuel_l": null,
@@ -526,6 +555,7 @@
       "address": 230,
       "address_hex": "0xE6",
       "name": "Controlador del fabricante 0xE6 (hidráulico/implementos)",
+      "protocol": "J1939",
       "software": [
         "SIM-MCH-5590-04"
       ],
@@ -536,6 +566,8 @@
         "serial": "SIM0001234",
         "unit": "FLOTA-07"
       },
+      "calibrations": [],
+      "vin": null,
       "engine_hours": 9874.9,
       "total_revolutions": null,
       "total_fuel_l": null,
@@ -547,7 +579,7 @@
   ],
   "live": {
     "rpm": {
-      "value": 1806.625,
+      "value": 1800.875,
       "unit": "rpm",
       "label": "Régimen motor",
       "source": 0
@@ -559,7 +591,7 @@
       "source": 0
     },
     "coolant_c": {
-      "value": 79,
+      "value": 80,
       "unit": "°C",
       "label": "Temperatura refrigerante",
       "source": 0
@@ -571,7 +603,7 @@
       "source": 0
     },
     "oil_temp_c": {
-      "value": 85.594,
+      "value": 86.219,
       "unit": "°C",
       "label": "Temperatura aceite motor",
       "source": 0
@@ -595,7 +627,7 @@
       "source": 0
     },
     "boost_kpa": {
-      "value": 180.0,
+      "value": 178.0,
       "unit": "kPa",
       "label": "Presión de sobrealimentación",
       "source": 0
@@ -607,13 +639,13 @@
       "source": 0
     },
     "battery_v": {
-      "value": 27.55,
+      "value": 27.7,
       "unit": "V",
       "label": "Tensión batería",
       "source": 0
     },
     "fuel_rate_lh": {
-      "value": 22.15,
+      "value": 21.9,
       "unit": "L/h",
       "label": "Consumo instantáneo",
       "source": 0

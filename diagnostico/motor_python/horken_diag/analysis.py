@@ -26,7 +26,7 @@ MACHINE_CLASSES = {
     "minicargadora": ("Minicargadora / minipala", 3, 10),
     "camion": ("Camión", 10, 45),
     "coche": ("Coche / furgoneta", 0.5, 15),
-    "manipuladora": ("Manipuladora de material (Fuchs, Sennebogen...)", 10, 35),
+    "manipuladora": ("Manipuladora de material", 10, 35),
     "generica": ("Máquina (clase no indicada)", 2, 80),
 }
 

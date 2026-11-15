@@ -1,0 +1,419 @@
+{
+  "session_id": "20261115-103849-d521",
+  "operator": "Taller",
+  "location": "Múnich",
+  "recipients": [],
+  "simulated": true,
+  "updated_at": "2026-11-15T10:39:00.243892+00:00",
+  "machine": {
+    "make": "FUCHS",
+    "model": "MHL350",
+    "serial": "SIM-MHL-03521",
+    "unit": "GRUA-2",
+    "vin": "SIMFUCHSMHL350X21",
+    "brand_key": "fuchs",
+    "brand_name": "Fuchs (Terex Fuchs)",
+    "connector": "Conector de diagnóstico en cabina (motor por J1939)",
+    "official_software": "Herramienta de servicio Fuchs + software del fabricante del motor",
+    "brand_note": "Manipuladoras de material MHL: motor habitualmente Deutz (según serie), diagnóstico de motor por J1939. El control de máquina (hidráulico, cabina elevable, giro) es propio de Fuchs: se registra y, en series nuevas, puede responder a UDS.",
+    "machine_class": "manipuladora",
+    "machine_class_label": "Manipuladora de material"
+  },
+  "lamps": {
+    "mil": false,
+    "red_stop": false,
+    "amber_warning": true,
+    "protect": false
+  },
+  "protocols": [
+    "J1939",
+    "UDS"
+  ],
+  "notes": [],
+  "summary": {
+    "active_dtcs": 2,
+    "history_dtcs": 2,
+    "max_severity": 3,
+    "ecus": 3,
+    "frames": 285,
+    "repair_cost_min_eur": 416,
+    "repair_cost_max_eur": 914
+  },
+  "dtcs": [
+    {
+      "code": "B11A4-13",
+      "spn": null,
+      "fmi": null,
+      "protocol": "UDS",
+      "active": true,
+      "occurrences": 1,
+      "mil": false,
+      "status_text": "activa, confirmada",
+      "source_name": "Gestión · Control maquina",
+      "name": "Código específico del fabricante (B11A4)",
+      "name_language": "es",
+      "system": "Carrocería / cabina",
+      "fmi_text": "Circuito abierto",
+      "fault_type": "electrico",
+      "severity": 3,
+      "critical": false,
+      "warning": null,
+      "causes": [
+        "Fallo de circuito: cableado, conector o el propio componente"
+      ],
+      "steps": [
+        "Comprobar continuidad de cada cable entre la ECU y el componente (circuito abierto)",
+        "Medir la resistencia del componente (bobina/solenoide) y comparar con la especificación",
+        "Revisar conectores sueltos o terminales abiertos"
+      ],
+      "parts": [],
+      "difficulty": 2,
+      "labour_hours": 1.5,
+      "cost_min_eur": 58,
+      "cost_max_eur": 107,
+      "known": false,
+      "proprietary": true,
+      "brand_note": "",
+      "source": "UDS 29b 0x27"
+    },
+    {
+      "code": "SPN 3719 FMI 16",
+      "spn": 3719,
+      "fmi": 16,
+      "active": true,
+      "occurrences": 3,
+      "source": 0,
+      "source_name": "Motor #1 (ECM)",
+      "name": "Carga de hollín del DPF",
+      "system": "Emisiones · DPF",
+      "fmi_text": "Valor por encima de lo normal (nivel moderado)",
+      "fault_type": "condicion",
+      "severity": 3,
+      "critical": false,
+      "warning": null,
+      "causes": [
+        "Mucho trabajo a ralentí o baja carga",
+        "Regeneraciones inhibidas por el operador",
+        "Consumo de aceite / inyector goteando (más hollín)"
+      ],
+      "steps": [
+        "Realizar regeneración estacionaria",
+        "Revisar inyectores y turbo si se satura con frecuencia",
+        "Instruir al operador para no inhibir la regeneración"
+      ],
+      "parts": [
+        {
+          "nombre": "Limpieza profesional DPF",
+          "min": 300,
+          "max": 700
+        }
+      ],
+      "difficulty": 2,
+      "labour_hours": 1.5,
+      "cost_min_eur": 358,
+      "cost_max_eur": 807,
+      "known": true,
+      "proprietary": false,
+      "brand_note": "Manipuladoras de material MHL: motor habitualmente Deutz (según serie), diagnóstico de motor por J1939. El control de máquina (hidráulico, cabina elevable, giro) es propio de Fuchs: se registra y, en series nuevas, puede responder a UDS.",
+      "protocol": "J1939"
+    },
+    {
+      "code": "SPN 110 FMI 16",
+      "spn": 110,
+      "fmi": 16,
+      "active": false,
+      "occurrences": 2,
+      "source": 0,
+      "source_name": "Motor #1 (ECM)",
+      "name": "Temperatura del refrigerante motor",
+      "system": "Motor · Refrigeración",
+      "fmi_text": "Valor por encima de lo normal (nivel moderado)",
+      "fault_type": "condicion",
+      "severity": 5,
+      "critical": true,
+      "warning": "Si la temperatura es alta, dejar el motor al ralentí 3-5 min y parar. No abrir el tapón en caliente.",
+      "causes": [
+        "Radiador obstruido por polvo/paja (muy habitual en obra)",
+        "Nivel de refrigerante bajo o fuga",
+        "Termostato bloqueado",
+        "Correa o bomba de agua defectuosa",
+        "Ventilador hidráulico/viscoso sin funcionar",
+        "Junta de culata (gases en refrigerante)"
+      ],
+      "steps": [
+        "Limpiar radiador, enfriador de aceite hidráulico e intercooler con aire a presión desde el lado del motor",
+        "Comprobar nivel y fugas en frío",
+        "Comprobar funcionamiento del ventilador a temperatura de trabajo",
+        "Probar termostato en agua caliente",
+        "Prueba de CO2 en el depósito de expansión si se sospecha junta de culata"
+      ],
+      "parts": [
+        {
+          "nombre": "Termostato + junta",
+          "min": 40,
+          "max": 180
+        },
+        {
+          "nombre": "Bomba de agua",
+          "min": 250,
+          "max": 900
+        },
+        {
+          "nombre": "Refrigerante (20 L)",
+          "min": 60,
+          "max": 140
+        }
+      ],
+      "difficulty": 3,
+      "labour_hours": 4.0,
+      "cost_min_eur": 194,
+      "cost_max_eur": 1186,
+      "known": true,
+      "proprietary": false,
+      "brand_note": "Manipuladoras de material MHL: motor habitualmente Deutz (según serie), diagnóstico de motor por J1939. El control de máquina (hidráulico, cabina elevable, giro) es propio de Fuchs: se registra y, en series nuevas, puede responder a UDS.",
+      "protocol": "J1939"
+    },
+    {
+      "code": "U0073-88",
+      "spn": null,
+      "fmi": null,
+      "protocol": "UDS",
+      "active": false,
+      "occurrences": 1,
+      "mil": false,
+      "status_text": "confirmada",
+      "source_name": "Gestión · Control maquina",
+      "name": "Control Module Communication Bus Off",
+      "name_language": "en",
+      "system": "Comunicación entre centralitas",
+      "fmi_text": "Bus desactivado (bus off)",
+      "fault_type": "condicion",
+      "severity": 2,
+      "critical": false,
+      "warning": null,
+      "causes": [],
+      "steps": [
+        "Con baterías desconectadas medir entre CAN-H y CAN-L: ~60Ω correcto, 120Ω falta una terminación, <50Ω cortocircuito o terminación extra",
+        "Desconectar centralitas una a una para localizar la que bloquea el bus",
+        "Revisar conectores con humedad/corrosión"
+      ],
+      "parts": [],
+      "difficulty": 3,
+      "labour_hours": 2.0,
+      "cost_min_eur": 77,
+      "cost_max_eur": 143,
+      "known": true,
+      "proprietary": false,
+      "brand_note": "",
+      "source": "UDS 29b 0x27"
+    }
+  ],
+  "ecus": [
+    {
+      "address": 0,
+      "address_hex": "0x00",
+      "name": "Motor #1 (ECM)",
+      "protocol": "J1939",
+      "software": [
+        "SIM-DEUTZ-EMR5-4.03"
+      ],
+      "ecu_id": null,
+      "component": {
+        "make": "FUCHS",
+        "model": "MHL350",
+        "serial": "SIM-MHL-03521",
+        "unit": "GRUA-2"
+      },
+      "calibrations": [
+        {
+          "cal_id": "SIM-DEUTZ-TCD6.1",
+          "cvn": "1F22A0B7"
+        }
+      ],
+      "vin": null,
+      "engine_hours": 7340.5,
+      "total_revolutions": 638624000.0,
+      "total_fuel_l": 139469.5,
+      "total_km": null,
+      "total_km_hr": null,
+      "active_dtcs": 1,
+      "history_dtcs": 1
+    },
+    {
+      "address": 23,
+      "address_hex": "0x17",
+      "name": "Cuadro de instrumentos",
+      "protocol": "J1939",
+      "software": [
+        "SIM-FUCHS-DSP-7.2"
+      ],
+      "ecu_id": null,
+      "component": {
+        "make": "FUCHS",
+        "model": "MHL350",
+        "serial": "SIM-MHL-03521",
+        "unit": "GRUA-2"
+      },
+      "calibrations": [],
+      "vin": null,
+      "engine_hours": 7341.1,
+      "total_revolutions": null,
+      "total_fuel_l": null,
+      "total_km": null,
+      "total_km_hr": null,
+      "active_dtcs": 0,
+      "history_dtcs": 0
+    },
+    {
+      "address": "UDS 29b 0x27",
+      "address_hex": "UDS 29b 0x27",
+      "name": "Gestión · Control maquina",
+      "protocol": "UDS",
+      "software": [
+        "SIM-MHL-CTRL-3.11"
+      ],
+      "ecu_id": {
+        "part_number": "",
+        "serial": "",
+        "manufacturer": ""
+      },
+      "component": null,
+      "calibrations": [],
+      "vin": "SIMFUCHSMHL350X21",
+      "engine_hours": null,
+      "total_revolutions": null,
+      "total_fuel_l": null,
+      "total_km": null,
+      "total_km_hr": null,
+      "active_dtcs": 1,
+      "history_dtcs": 1
+    }
+  ],
+  "live": {
+    "rpm": {
+      "value": 1805.0,
+      "unit": "rpm",
+      "label": "Régimen motor",
+      "source": 0
+    },
+    "torque_pct": {
+      "value": 75,
+      "unit": "%",
+      "label": "Par motor real",
+      "source": 0
+    },
+    "coolant_c": {
+      "value": 80,
+      "unit": "°C",
+      "label": "Temperatura refrigerante",
+      "source": 0
+    },
+    "fuel_temp_c": {
+      "value": 42,
+      "unit": "°C",
+      "label": "Temperatura combustible",
+      "source": 0
+    },
+    "oil_temp_c": {
+      "value": 86.438,
+      "unit": "°C",
+      "label": "Temperatura aceite motor",
+      "source": 0
+    },
+    "oil_level_pct": {
+      "value": 92.0,
+      "unit": "%",
+      "label": "Nivel aceite motor",
+      "source": 0
+    },
+    "oil_pressure_kpa": {
+      "value": 356.0,
+      "unit": "kPa",
+      "label": "Presión aceite motor",
+      "source": 0
+    },
+    "coolant_level_pct": {
+      "value": 94.8,
+      "unit": "%",
+      "label": "Nivel refrigerante",
+      "source": 0
+    },
+    "boost_kpa": {
+      "value": 178.0,
+      "unit": "kPa",
+      "label": "Presión de sobrealimentación",
+      "source": 0
+    },
+    "intake_temp_c": {
+      "value": 48,
+      "unit": "°C",
+      "label": "Temperatura colector admisión",
+      "source": 0
+    },
+    "battery_v": {
+      "value": 27.65,
+      "unit": "V",
+      "label": "Tensión batería",
+      "source": 0
+    },
+    "fuel_rate_lh": {
+      "value": 21.95,
+      "unit": "L/h",
+      "label": "Consumo instantáneo",
+      "source": 0
+    },
+    "fuel_level_pct": {
+      "value": 63.2,
+      "unit": "%",
+      "label": "Nivel combustible",
+      "source": 23
+    },
+    "ambient_c": {
+      "value": 14.5,
+      "unit": "°C",
+      "label": "Temperatura ambiente",
+      "source": 0
+    },
+    "hyd_oil_temp_c": {
+      "value": 64,
+      "unit": "°C",
+      "label": "Temperatura aceite hidráulico",
+      "source": 0
+    }
+  },
+  "tamper": {
+    "verdict": "ok",
+    "label": "Sin indicios de manipulación",
+    "score": 0,
+    "checks": 3,
+    "reported_hours": 7340.5,
+    "estimated_real_hours": null,
+    "machine_class": "manipuladora",
+    "evidence": [
+      {
+        "title": "Horas coherentes entre centralitas",
+        "detail": "2 centralitas coinciden (diferencia 0,6 h).",
+        "weight": 0,
+        "level": "ok"
+      },
+      {
+        "title": "Régimen medio plausible",
+        "detail": "1.450 rpm de media de vida.",
+        "weight": 0,
+        "level": "ok"
+      },
+      {
+        "title": "Consumo medio coherente",
+        "detail": "19,0 L/h (Manipuladora de material: 10-35 L/h).",
+        "weight": 0,
+        "level": "ok"
+      }
+    ]
+  },
+  "modifications": {
+    "level": "ok",
+    "findings": [],
+    "note": "La reprogramación profesional puede no dejar rastro legible por J1939; confirmar con el software oficial si hay dudas."
+  },
+  "unknown_pgns": []
+}

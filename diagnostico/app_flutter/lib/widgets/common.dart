@@ -4,120 +4,116 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-class SectionCard extends StatelessWidget {
-  final String? title;
-  final IconData? icon;
-  final Widget child;
-  final Color? accent;
-  final EdgeInsets padding;
-  const SectionCard({super.key, this.title, this.icon, required this.child, this.accent,
-      this.padding = const EdgeInsets.all(14)});
+TextStyle cond(BuildContext c, double size, {FontWeight w = FontWeight.w600, Color? color, double ls = 0}) =>
+    TextStyle(fontFamily: fCond, fontSize: size, fontWeight: w, color: color ?? c.ink.ink, letterSpacing: ls, height: 1.1);
+TextStyle mono(BuildContext c, double size, {FontWeight w = FontWeight.w400, Color? color}) =>
+    TextStyle(fontFamily: fMono, fontSize: size, fontWeight: w, color: color ?? c.ink.ink, height: 1.25);
+TextStyle body(BuildContext c, double size, {FontWeight w = FontWeight.w400, Color? color}) =>
+    TextStyle(fontFamily: fBody, fontSize: size, fontWeight: w, color: color ?? c.ink.ink, height: 1.35);
 
+/// Línea fina de separación, como en un formulario impreso.
+class Rule extends StatelessWidget {
+  final double indent;
+  final bool strong;
+  const Rule({super.key, this.indent = 0, this.strong = false});
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: (accent ?? Colors.white).withValues(alpha: accent == null ? 0.06 : 0.6)),
-      ),
-      child: Padding(
-        padding: padding,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (title != null) ...[
-            Row(children: [
-              if (icon != null) Icon(icon, size: 18, color: accent ?? kAmber),
-              if (icon != null) const SizedBox(width: 8),
-              Expanded(
-                child: Text(title!.toUpperCase(),
-                    style: TextStyle(
-                        fontSize: 12, letterSpacing: 1.1, fontWeight: FontWeight.w700, color: accent ?? kAmber)),
-              ),
-            ]),
-            const SizedBox(height: 10),
-          ],
-          child,
-        ]),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+      margin: EdgeInsets.only(left: indent),
+      height: strong ? 2 : 1,
+      color: strong ? context.ink.ink : context.ink.rule);
 }
 
-class SeverityBadge extends StatelessWidget {
-  final int severity;
-  final bool compact;
-  const SeverityBadge(this.severity, {super.key, this.compact = false});
-
+/// "02 ─ AVERÍAS ACTIVAS"
+class SectionHeader extends StatelessWidget {
+  final String number;
+  final String title;
+  final Widget? trailing;
+  const SectionHeader(this.number, this.title, {super.key, this.trailing});
   @override
   Widget build(BuildContext context) {
-    final c = severityColors[severity] ?? Colors.grey;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 9, vertical: 3),
-      decoration: BoxDecoration(color: c.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: c)),
-      child: Text(compact ? '$severity' : '$severity/5 ${severityLabels[severity] ?? ''}',
-          style: TextStyle(color: c, fontWeight: FontWeight.w800, fontSize: 12)),
-    );
-  }
-}
-
-class DifficultyDots extends StatelessWidget {
-  final int level;
-  final bool showLabel;
-  const DifficultyDots(this.level, {super.key, this.showLabel = true});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = severityColors[level] ?? kAmber;
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      for (var i = 1; i <= 5; i++)
-        Container(
-          width: 14, height: 14, margin: const EdgeInsets.only(right: 4),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: i <= level ? c : Colors.transparent,
-            border: Border.all(color: i <= level ? c : Colors.white24, width: 1.5),
-          ),
-        ),
-      if (showLabel) ...[
-        const SizedBox(width: 6),
-        Flexible(child: Text('$level/5 · ${difficultyLabels[level] ?? ''}',
-            style: const TextStyle(fontSize: 12, color: Colors.white70))),
-      ],
-    ]);
-  }
-}
-
-class StatTile extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? color;
-  final IconData icon;
-  const StatTile({super.key, required this.label, required this.value, required this.icon, this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: kCard, borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white10)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, size: 18, color: color ?? Colors.white54),
-        const SizedBox(height: 6),
-        FittedBox(child: Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color))),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.white60), maxLines: 2),
+    final k = context.ink;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 10),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        Text(number, style: mono(context, 12, color: k.accent, w: FontWeight.w500)),
+        const SizedBox(width: 10),
+        Expanded(child: Text(title.toUpperCase(), style: cond(context, 15, w: FontWeight.w700, ls: 1.4))),
+        if (trailing != null) trailing!,
       ]),
     );
   }
 }
 
-class LiveDot extends StatefulWidget {
-  const LiveDot({super.key});
+/// Gravedad como número "sellado" en una caja.
+class SevStamp extends StatelessWidget {
+  final int severity;
+  final double size;
+  const SevStamp(this.severity, {super.key, this.size = 34});
   @override
-  State<LiveDot> createState() => _LiveDotState();
+  Widget build(BuildContext context) {
+    if (severity <= 0) {
+      return Container(width: size, height: size, alignment: Alignment.center,
+          decoration: BoxDecoration(border: Border.all(color: context.ink.ok, width: 1.6)),
+          child: Icon(Icons.check, size: size * 0.6, color: context.ink.ok));
+    }
+    final c = context.ink.severity(severity);
+    final filled = severity >= 4;
+    return Container(
+      width: size, height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: filled ? c : Colors.transparent, border: Border.all(color: c, width: 1.6)),
+      child: Text('$severity', style: cond(context, size * 0.62, w: FontWeight.w700,
+          color: filled ? context.ink.paper : c)),
+    );
+  }
 }
 
-class _LiveDotState extends State<LiveDot> with SingleTickerProviderStateMixin {
-  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+/// Dificultad como 5 barras de altura creciente (tipo cobertura).
+class DifficultyBars extends StatelessWidget {
+  final int level;
+  final bool label;
+  const DifficultyBars(this.level, {super.key, this.label = true});
+  @override
+  Widget build(BuildContext context) {
+    final k = context.ink;
+    return Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
+      for (var i = 1; i <= 5; i++)
+        Container(width: 5, height: 5.0 + i * 2.6, margin: const EdgeInsets.only(right: 2.5),
+            color: i <= level ? k.ink : k.rule),
+      if (label) ...[
+        const SizedBox(width: 8),
+        Flexible(child: Text('$level/5 · ${difficultyLabels[level] ?? ''}', style: body(context, 13, color: k.ink2))),
+      ],
+    ]);
+  }
+}
+
+/// Sello inclinado para el veredicto de horas/km: el único "toque a mano".
+class VerdictStamp extends StatelessWidget {
+  final String text;
+  final Color color;
+  const VerdictStamp(this.text, this.color, {super.key});
+  @override
+  Widget build(BuildContext context) => Transform.rotate(
+        angle: -0.035,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(border: Border.all(color: color, width: 2.2)),
+          child: Text(text.toUpperCase(), style: cond(context, 22, w: FontWeight.w700, color: color, ls: 1.2)),
+        ),
+      );
+}
+
+/// Punto que parpadea + "en directo".
+class LiveMark extends StatefulWidget {
+  final String? suffix;
+  const LiveMark({super.key, this.suffix});
+  @override
+  State<LiveMark> createState() => _LiveMarkState();
+}
+
+class _LiveMarkState extends State<LiveMark> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..repeat(reverse: true);
   @override
   void dispose() {
     _c.dispose();
@@ -125,33 +121,89 @@ class _LiveDotState extends State<LiveDot> with SingleTickerProviderStateMixin {
   }
 
   @override
-  Widget build(BuildContext context) => FadeTransition(
-        opacity: Tween(begin: 0.3, end: 1.0).animate(_c),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(color: Colors.red.shade700, borderRadius: BorderRadius.circular(20)),
-          child: const Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.circle, size: 8, color: Colors.white),
-            SizedBox(width: 4),
-            Text('EN VIVO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
-          ]),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final k = context.ink;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      FadeTransition(opacity: Tween(begin: 0.25, end: 1.0).animate(_c),
+          child: Container(width: 7, height: 7, decoration: BoxDecoration(color: k.accent, shape: BoxShape.circle))),
+      const SizedBox(width: 6),
+      Text('en directo${widget.suffix ?? ''}', style: mono(context, 11, color: k.accent, w: FontWeight.w500)),
+    ]);
+  }
 }
 
-class Sparkline extends StatelessWidget {
+/// Fila etiqueta / valor de una ficha.
+class KV extends StatelessWidget {
+  final String k;
+  final String v;
+  final bool monoValue;
+  final double keyWidth;
+  const KV(this.k, this.v, {super.key, this.monoValue = false, this.keyWidth = 118});
+  @override
+  Widget build(BuildContext context) {
+    final value = (v.isEmpty || v == 'null') ? '—' : v;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: keyWidth, child: Text(k, style: body(context, 13, color: context.ink.ink3))),
+        Expanded(child: Text(value, style: monoValue ? mono(context, 12.5) : body(context, 14))),
+      ]),
+    );
+  }
+}
+
+/// Barra de rango: dónde está el valor respecto a lo normal.
+class RangeBar extends StatelessWidget {
+  final double value, min, max;
+  final double? lo, hi;  // zona normal
+  final Color color;
+  const RangeBar({super.key, required this.value, required this.min, required this.max, this.lo, this.hi,
+      required this.color});
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+      size: const Size(double.infinity, 12),
+      painter: _RangePainter(value, min, max, lo, hi, color, context.ink));
+}
+
+class _RangePainter extends CustomPainter {
+  final double v, mn, mx;
+  final double? lo, hi;
+  final Color c;
+  final Tinta k;
+  _RangePainter(this.v, this.mn, this.mx, this.lo, this.hi, this.c, this.k);
+  @override
+  void paint(Canvas canvas, Size s) {
+    double x(double val) => ((val - mn) / (mx - mn)).clamp(0.0, 1.0) * s.width;
+    final y = s.height / 2;
+    canvas.drawLine(Offset(0, y), Offset(s.width, y), Paint()..color = k.rule..strokeWidth = 2);
+    if (lo != null || hi != null) {
+      canvas.drawLine(Offset(x(lo ?? mn), y), Offset(x(hi ?? mx), y), Paint()..color = k.ink3..strokeWidth = 2);
+    }
+    for (var i = 0; i <= 10; i++) {
+      final tx = s.width * i / 10;
+      canvas.drawLine(Offset(tx, y - (i % 5 == 0 ? 4 : 2)), Offset(tx, y), Paint()..color = k.ink3..strokeWidth = 1);
+    }
+    final px = x(v);
+    canvas.drawRect(Rect.fromCenter(center: Offset(px, y), width: 3, height: s.height), Paint()..color = c);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RangePainter o) => o.v != v || o.c != c;
+}
+
+/// Línea de tendencia, sin relleno.
+class Trend extends StatelessWidget {
   final List<double> values;
   final Color color;
-  const Sparkline(this.values, {super.key, this.color = kAmber});
+  const Trend(this.values, this.color, {super.key});
   @override
-  Widget build(BuildContext context) => CustomPaint(painter: _SparkPainter(values, color), size: Size.infinite);
+  Widget build(BuildContext context) => CustomPaint(painter: _TrendPainter(values, color), size: Size.infinite);
 }
 
-class _SparkPainter extends CustomPainter {
+class _TrendPainter extends CustomPainter {
   final List<double> v;
   final Color color;
-  _SparkPainter(this.v, this.color);
-
+  _TrendPainter(this.v, this.color);
   @override
   void paint(Canvas canvas, Size size) {
     if (v.length < 2) return;
@@ -163,18 +215,38 @@ class _SparkPainter extends CustomPainter {
       final y = size.height - (v[i] - lo) / span * size.height;
       i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
     }
-    final fill = Path.from(path)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(fill, Paint()..color = color.withValues(alpha: 0.12));
     canvas.drawPath(path, Paint()
       ..color = color
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeJoin = StrokeJoin.round);
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke);
   }
 
   @override
-  bool shouldRepaint(covariant _SparkPainter old) => true;
+  bool shouldRepaint(covariant _TrendPainter old) => true;
+}
+
+/// Botón principal: rectangular, tinta llena.
+class InkButton extends StatelessWidget {
+  final String text;
+  final VoidCallback? onTap;
+  final bool busy;
+  final bool accent;
+  const InkButton(this.text, {super.key, this.onTap, this.busy = false, this.accent = true});
+  @override
+  Widget build(BuildContext context) {
+    final k = context.ink;
+    final bg = onTap == null ? k.rule : (accent ? k.accent : k.ink);
+    return Material(
+      color: bg,
+      child: InkWell(
+        onTap: busy ? null : onTap,
+        child: Container(
+          height: 54, alignment: Alignment.center,
+          child: busy
+              ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: k.paper))
+              : Text(text.toUpperCase(), style: cond(context, 17, w: FontWeight.w700, color: k.paper, ls: 1.5)),
+        ),
+      ),
+    );
+  }
 }

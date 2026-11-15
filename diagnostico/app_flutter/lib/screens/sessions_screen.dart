@@ -1,116 +1,153 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../data/app_config.dart';
 import '../data/repository.dart';
 import '../data/session.dart';
+import '../main.dart' show nightMode;
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'session_screen.dart';
 
 class SessionsScreen extends StatelessWidget {
   final SessionRepository repo;
-  const SessionsScreen({super.key, required this.repo});
+  final VoidCallback? onExitDemo;
+  const SessionsScreen({super.key, required this.repo, this.onExitDemo});
+
+  String _greeting() {
+    final h = DateTime.now().hour;
+    return h < 13 ? 'Buenos días' : (h < 21 ? 'Buenas tardes' : 'Buenas noches');
+  }
 
   @override
   Widget build(BuildContext context) {
+    final k = context.ink;
+    final user = repo.isDemo ? null : FirebaseAuth.instance.currentUser?.email;
     return Scaffold(
-      appBar: AppBar(
-        title: const Row(children: [
-          Icon(Icons.precision_manufacturing, color: kAmber),
-          SizedBox(width: 10),
-          Text('HORKEN', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)),
-        ]),
-        actions: [
-          if (!repo.isDemo)
-            IconButton(icon: const Icon(Icons.logout), tooltip: 'Salir', onPressed: () => FirebaseAuth.instance.signOut()),
-        ],
-      ),
-      body: StreamBuilder<List<Session>>(
-        stream: repo.sessions(),
-        builder: (context, snap) {
-          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-          final list = snap.data!;
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            children: [
-              if (repo.isDemo)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: kAmber.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: kAmber.withValues(alpha: 0.5))),
-                  child: const Text(
-                      'MODO DEMOSTRACIÓN · datos del simulador de máquinas. Al configurar Firebase verás aquí las '
-                      'máquinas reales que lea el portátil.',
-                      style: TextStyle(fontSize: 12)),
+      body: SafeArea(
+        child: StreamBuilder<List<Session>>(
+          stream: repo.sessions(),
+          builder: (context, snap) {
+            final list = snap.data ?? const <Session>[];
+            final live = list.where((s) => s.isLive).length;
+            return ListView(padding: EdgeInsets.zero, children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 8, 0),
+                child: Row(children: [
+                  Text('HORKEN', style: cond(context, 26, w: FontWeight.w700, ls: 4)),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: nightMode.value ? 'Modo día' : 'Modo noche',
+                    icon: Icon(nightMode.value ? Icons.light_mode_outlined : Icons.dark_mode_outlined, color: k.ink2),
+                    onPressed: () {
+                      nightMode.value = !nightMode.value;
+                      AppConfig.setNightTheme(nightMode.value);
+                    },
+                  ),
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: k.ink2),
+                    color: k.paper2,
+                    onSelected: (v) async {
+                      if (v == 'salir') await FirebaseAuth.instance.signOut();
+                      if (v == 'demo') onExitDemo?.call();
+                      if (v == 'codigo') {
+                        await AppConfig.clearCode();
+                        await FirebaseAuth.instance.signOut();
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      if (repo.isDemo) const PopupMenuItem(value: 'demo', child: Text('Salir de la demostración')),
+                      if (!repo.isDemo) const PopupMenuItem(value: 'salir', child: Text('Cerrar sesión')),
+                      if (!repo.isDemo) const PopupMenuItem(value: 'codigo', child: Text('Cambiar código de configuración')),
+                    ],
+                  ),
+                ]),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 2, 20, 18),
+                child: Text(
+                  repo.isDemo
+                      ? 'Máquinas de prueba del simulador. Así se verán las reales.'
+                      : '${_greeting()}${user != null ? ', ${user.split('@').first}' : ''}. '
+                        '${live > 0 ? '$live máquina${live > 1 ? 's' : ''} conectada${live > 1 ? 's' : ''} ahora.' : 'Ninguna máquina conectada ahora.'}',
+                  style: body(context, 15, color: k.ink2),
                 ),
-              Text('Diagnósticos', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              if (list.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text('Todavía no hay diagnósticos. Conecta el lector en el portátil para empezar.',
-                      textAlign: TextAlign.center),
+              ),
+              const Rule(strong: true),
+              if (!snap.hasData)
+                const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()))
+              else if (list.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Text('Todavía no hay ninguna lectura.\nEnchufa el lector a la máquina y abre '
+                      '"diagnostico.bat" en el portátil: aparecerá aquí al momento.',
+                      style: body(context, 15, color: k.ink2)),
                 ),
-              for (final s in list) ...[_SessionCard(s, repo), const SizedBox(height: 10)],
-            ],
-          );
-        },
+              for (final s in list) _SessionRow(s, repo),
+              const SizedBox(height: 30),
+            ]);
+          },
+        ),
       ),
     );
   }
 }
 
-class _SessionCard extends StatelessWidget {
+class _SessionRow extends StatelessWidget {
   final Session s;
   final SessionRepository repo;
-  const _SessionCard(this.s, this.repo);
+  const _SessionRow(this.s, this.repo);
 
   @override
   Widget build(BuildContext context) {
-    final sev = severityColors[s.maxSeverity]!;
+    final k = context.ink;
     final t = s.tamper;
+    final verdict = t['verdict'] as String?;
     final d = s.updatedAt;
+    final hours = t['reported_hours'];
+    final facts = <String>[
+      s.activeCount == 0 ? 'sin averías activas' : '${s.activeCount} avería${s.activeCount > 1 ? 's' : ''} activa${s.activeCount > 1 ? 's' : ''}',
+      if (hours != null) '${fmtNum(hours, decimals: 0)} h',
+      if (s.machine['vin'] != null && '${s.machine['vin']}'.isNotEmpty && hours == null) 'VIN ${s.machine['vin']}',
+    ];
+    final verdictText = switch (verdict) {
+      'manipulado' => 'horas/km manipulados',
+      'sospechoso' => 'horas/km dudosos',
+      'ok' => 'horas/km correctos',
+      _ => null,
+    };
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SessionScreen(repo: repo, id: s.id))),
-      child: Container(
-        decoration: BoxDecoration(color: kCard, borderRadius: BorderRadius.circular(14),
-            border: Border(left: BorderSide(color: sev, width: 5))),
-        padding: const EdgeInsets.all(14),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(child: Text(s.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
-            if (s.isLive) const LiveDot(),
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  if (s.isLive) const LiveMark() else Text(whenText(d), style: mono(context, 11, color: k.ink3)),
+                  if (s.location.isNotEmpty) Text('  ·  ${s.location}', style: mono(context, 11, color: k.ink3)),
+                ]),
+                const SizedBox(height: 4),
+                Text(s.title.toUpperCase(), style: cond(context, 22, w: FontWeight.w700, ls: 0.5)),
+                Text('${s.machine['machine_class_label'] ?? ''} · nº ${s.machine['serial'] ?? '—'}',
+                    style: body(context, 13, color: k.ink2), maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 8),
+                Text.rich(TextSpan(children: [
+                  TextSpan(text: facts.join('  ·  '), style: body(context, 14, w: FontWeight.w500)),
+                  if (verdictText != null) ...[
+                    TextSpan(text: '  ·  ', style: body(context, 14)),
+                    TextSpan(text: verdictText, style: body(context, 14, w: FontWeight.w600, color: k.verdict(verdict))),
+                  ],
+                ])),
+              ]),
+            ),
+            const SizedBox(width: 12),
+            SevStamp(s.maxSeverity, size: 40),
           ]),
-          const SizedBox(height: 2),
-          Text('Nº serie ${s.machine['serial'] ?? '—'} · ${s.machine['machine_class_label'] ?? ''}',
-              style: const TextStyle(color: Colors.white60, fontSize: 12)),
-          const SizedBox(height: 10),
-          Wrap(spacing: 8, runSpacing: 6, children: [
-            _chip(Icons.error_outline, '${s.activeCount} activas', sev),
-            _chip(Icons.history, '${s.summary['history_dtcs'] ?? 0} históricas', Colors.white54),
-            _chip(Icons.timer_outlined, '${fmtNum(t['reported_hours'], decimals: 0)} h', Colors.white54),
-            _chip(Icons.policy_outlined, '${t['label'] ?? ''}', verdictColor(t['verdict'] as String?)),
-          ]),
-          if (d != null) ...[
-            const SizedBox(height: 8),
-            Text('${s.operator.isNotEmpty ? '${s.operator} · ' : ''}${s.location.isNotEmpty ? '${s.location} · ' : ''}'
-                '${d.day}/${d.month}/${d.year} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}',
-                style: const TextStyle(color: Colors.white38, fontSize: 11)),
-          ],
-        ]),
-      ),
+        ),
+        const Rule(indent: 20),
+      ]),
     );
   }
-
-  Widget _chip(IconData i, String t, Color c) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(color: c.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(i, size: 14, color: c),
-          const SizedBox(width: 4),
-          Text(t, style: TextStyle(fontSize: 12, color: c, fontWeight: FontWeight.w600)),
-        ]),
-      );
 }

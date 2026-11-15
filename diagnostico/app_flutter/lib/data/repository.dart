@@ -57,7 +57,7 @@ class DemoRepository implements SessionRepository {
   bool get isDemo => true;
 
   Future<void> load() async {
-    for (final name in ['cat320', 'arjes', 'hamm']) {
+    for (final name in ['cat320', 'fuchs', 'arjes', 'hamm']) {
       final j = jsonDecode(await rootBundle.loadString('assets/demo/$name.json')) as Map<String, dynamic>;
       j['status'] = name == 'cat320' ? 'live' : 'finished';
       _data[name] = j;

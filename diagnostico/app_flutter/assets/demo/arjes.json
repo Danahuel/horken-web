@@ -1,15 +1,16 @@
 {
-  "session_id": "20261115-034251-cf2f",
+  "session_id": "20261115-103911-bff9",
   "operator": "Taller",
-  "location": "Alemania",
+  "location": "Múnich",
   "recipients": [],
   "simulated": true,
-  "updated_at": "2026-11-15T03:43:01.800840+00:00",
+  "updated_at": "2026-11-15T10:39:21.971804+00:00",
   "machine": {
     "make": "ARJES",
     "model": "VZ950",
     "serial": "SIM-ARJ-OTRA-77",
     "unit": "",
+    "vin": "",
     "brand_key": "arjes",
     "brand_name": "Arjes",
     "connector": "Según modelo; el motor industrial suele exponer J1939",
@@ -24,12 +25,16 @@
     "amber_warning": true,
     "protect": false
   },
+  "protocols": [
+    "J1939"
+  ],
+  "notes": [],
   "summary": {
     "active_dtcs": 2,
     "history_dtcs": 0,
     "max_severity": 5,
     "ecus": 2,
-    "frames": 262,
+    "frames": 274,
     "repair_cost_min_eur": 610,
     "repair_cost_max_eur": 7400
   },
@@ -87,7 +92,8 @@
       "cost_max_eur": 1186,
       "known": true,
       "proprietary": false,
-      "brand_note": "Trituradoras: averías de motor por J1939. El control de rotores/hidráulico es propio de Arjes y se registra en bruto."
+      "brand_note": "Trituradoras: averías de motor por J1939. El control de rotores/hidráulico es propio de Arjes y se registra en bruto.",
+      "protocol": "J1939"
     },
     {
       "code": "SPN 3251 FMI 16",
@@ -132,7 +138,8 @@
       "cost_max_eur": 6214,
       "known": true,
       "proprietary": false,
-      "brand_note": "Trituradoras: averías de motor por J1939. El control de rotores/hidráulico es propio de Arjes y se registra en bruto."
+      "brand_note": "Trituradoras: averías de motor por J1939. El control de rotores/hidráulico es propio de Arjes y se registra en bruto.",
+      "protocol": "J1939"
     }
   ],
   "ecus": [
@@ -140,6 +147,7 @@
       "address": 0,
       "address_hex": "0x00",
       "name": "Motor #1 (ECM)",
+      "protocol": "J1939",
       "software": [
         "SIM-ENG-ARJ-7.1"
       ],
@@ -150,6 +158,8 @@
         "serial": "SIM-ARJ-OTRA-77",
         "unit": ""
       },
+      "calibrations": [],
+      "vin": null,
       "engine_hours": 850.2,
       "total_revolutions": 81619000.0,
       "total_fuel_l": 32307.5,
@@ -162,6 +172,7 @@
       "address": 23,
       "address_hex": "0x17",
       "name": "Cuadro de instrumentos",
+      "protocol": "J1939",
       "software": [
         "SIM-ARJ-HMI-2.0"
       ],
@@ -172,6 +183,8 @@
         "serial": "SIM-ARJ-00911",
         "unit": ""
       },
+      "calibrations": [],
+      "vin": null,
       "engine_hours": 6420.7,
       "total_revolutions": null,
       "total_fuel_l": null,
@@ -183,7 +196,7 @@
   ],
   "live": {
     "rpm": {
-      "value": 1804.25,
+      "value": 1806.25,
       "unit": "rpm",
       "label": "Régimen motor",
       "source": 0
@@ -195,7 +208,7 @@
       "source": 0
     },
     "coolant_c": {
-      "value": 78,
+      "value": 80,
       "unit": "°C",
       "label": "Temperatura refrigerante",
       "source": 0
@@ -207,7 +220,7 @@
       "source": 0
     },
     "oil_temp_c": {
-      "value": 84.625,
+      "value": 86.469,
       "unit": "°C",
       "label": "Temperatura aceite motor",
       "source": 0
@@ -243,13 +256,13 @@
       "source": 0
     },
     "battery_v": {
-      "value": 27.6,
+      "value": 27.65,
       "unit": "V",
       "label": "Tensión batería",
       "source": 0
     },
     "fuel_rate_lh": {
-      "value": 22.05,
+      "value": 22.1,
       "unit": "L/h",
       "label": "Consumo instantáneo",
       "source": 0
@@ -267,7 +280,7 @@
       "source": 0
     },
     "hyd_oil_temp_c": {
-      "value": 63,
+      "value": 65,
       "unit": "°C",
       "label": "Temperatura aceite hidráulico",
       "source": 0

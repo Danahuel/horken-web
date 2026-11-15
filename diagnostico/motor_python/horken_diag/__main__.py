@@ -176,6 +176,11 @@ def main(argv=None):
     sub.add_parser("adaptadores", help="Windows: lista los lectores RP1210 instalados")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.WARNING)
+    for stream in (sys.stdout, sys.stderr):  # consolas Windows antiguas: nunca fallar por un acento o "→"
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
 
     if args.cmd == "interfaces":
         print(INTERFACES)

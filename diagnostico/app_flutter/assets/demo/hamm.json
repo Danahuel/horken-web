@@ -1,15 +1,16 @@
 {
-  "session_id": "20261115-034240-01af",
+  "session_id": "20261115-103900-5e4b",
   "operator": "Taller",
-  "location": "Alemania",
+  "location": "Múnich",
   "recipients": [],
   "simulated": true,
-  "updated_at": "2026-11-15T03:42:51.131918+00:00",
+  "updated_at": "2026-11-15T10:39:11.174951+00:00",
   "machine": {
     "make": "HAMM",
     "model": "H13i",
     "serial": "SIM-H13-00042",
     "unit": "R-03",
+    "vin": "",
     "brand_key": "hamm",
     "brand_name": "Hamm (Wirtgen Group)",
     "connector": "Conector de diagnóstico según serie (motor accesible por J1939)",
@@ -24,12 +25,16 @@
     "amber_warning": true,
     "protect": false
   },
+  "protocols": [
+    "J1939"
+  ],
+  "notes": [],
   "summary": {
     "active_dtcs": 1,
     "history_dtcs": 1,
     "max_severity": 3,
     "ecus": 2,
-    "frames": 259,
+    "frames": 261,
     "repair_cost_min_eur": 98,
     "repair_cost_max_eur": 1007
   },
@@ -79,7 +84,8 @@
       "cost_max_eur": 1007,
       "known": true,
       "proprietary": false,
-      "brand_note": "El motor (habitualmente Deutz o Cummins según modelo) se diagnostica por J1939. El controlador de vibración/tracción usa mensajes propios de Hamm: se registran pero no todos se pueden interpretar."
+      "brand_note": "El motor (habitualmente Deutz o Cummins según modelo) se diagnostica por J1939. El controlador de vibración/tracción usa mensajes propios de Hamm: se registran pero no todos se pueden interpretar.",
+      "protocol": "J1939"
     },
     {
       "code": "SPN 168 FMI 17",
@@ -126,7 +132,8 @@
       "cost_max_eur": 1307,
       "known": true,
       "proprietary": false,
-      "brand_note": "El motor (habitualmente Deutz o Cummins según modelo) se diagnostica por J1939. El controlador de vibración/tracción usa mensajes propios de Hamm: se registran pero no todos se pueden interpretar."
+      "brand_note": "El motor (habitualmente Deutz o Cummins según modelo) se diagnostica por J1939. El controlador de vibración/tracción usa mensajes propios de Hamm: se registran pero no todos se pueden interpretar.",
+      "protocol": "J1939"
     }
   ],
   "ecus": [
@@ -134,6 +141,7 @@
       "address": 0,
       "address_hex": "0x00",
       "name": "Motor #1 (ECM)",
+      "protocol": "J1939",
       "software": [
         "SIM-DEUTZ-EMR4-1.2"
       ],
@@ -144,6 +152,8 @@
         "serial": "SIM-H13-00042",
         "unit": "R-03"
       },
+      "calibrations": [],
+      "vin": null,
       "engine_hours": 3120.6,
       "total_revolutions": 290216000.0,
       "total_fuel_l": 29645.5,
@@ -156,6 +166,7 @@
       "address": 23,
       "address_hex": "0x17",
       "name": "Cuadro de instrumentos",
+      "protocol": "J1939",
       "software": [
         "SIM-HAMM-DSP-3.4"
       ],
@@ -166,6 +177,8 @@
         "serial": "SIM-H13-00042",
         "unit": "R-03"
       },
+      "calibrations": [],
+      "vin": null,
       "engine_hours": 3120.4,
       "total_revolutions": null,
       "total_fuel_l": null,
@@ -177,7 +190,7 @@
   ],
   "live": {
     "rpm": {
-      "value": 1785.125,
+      "value": 1791.5,
       "unit": "rpm",
       "label": "Régimen motor",
       "source": 0
@@ -189,7 +202,7 @@
       "source": 0
     },
     "coolant_c": {
-      "value": 80,
+      "value": 79,
       "unit": "°C",
       "label": "Temperatura refrigerante",
       "source": 0
@@ -201,7 +214,7 @@
       "source": 0
     },
     "oil_temp_c": {
-      "value": 86.344,
+      "value": 85.594,
       "unit": "°C",
       "label": "Temperatura aceite motor",
       "source": 0
@@ -213,7 +226,7 @@
       "source": 0
     },
     "oil_pressure_kpa": {
-      "value": 376.0,
+      "value": 380.0,
       "unit": "kPa",
       "label": "Presión aceite motor",
       "source": 0
@@ -225,7 +238,7 @@
       "source": 0
     },
     "boost_kpa": {
-      "value": 180.0,
+      "value": 178.0,
       "unit": "kPa",
       "label": "Presión de sobrealimentación",
       "source": 0
@@ -243,7 +256,7 @@
       "source": 0
     },
     "fuel_rate_lh": {
-      "value": 22.05,
+      "value": 21.75,
       "unit": "L/h",
       "label": "Consumo instantáneo",
       "source": 0
