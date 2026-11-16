@@ -8,6 +8,7 @@ import '../main.dart' show lightMode;
 import '../theme.dart';
 import '../widgets/brand.dart';
 import '../widgets/instruments.dart';
+import '../widgets/status.dart';
 import 'session_screen.dart';
 
 class FleetScreen extends StatelessWidget {
@@ -164,7 +165,7 @@ class _MachineCard extends StatelessWidget {
                 Row(children: [
                   Expanded(child: Text(s.brand.toUpperCase(), style: label(context, color: p.gold),
                       maxLines: 1, overflow: TextOverflow.ellipsis)),
-                  if (s.isLive) const LivePulse() else Text(whenText(s.updatedAt), style: tx(context, 11, color: p.text3)),
+                  LinkStatus(s),
                 ]),
                 const SizedBox(height: 5),
                 Text(s.model, style: tx(context, 22, w: FontWeight.w300, h: 1.1)),

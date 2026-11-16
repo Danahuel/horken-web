@@ -39,6 +39,19 @@ Demostración incluida (botón *Ver demostración*): Caterpillar 320 con horóme
 Arjes VZ950 con centralita de otra máquina y Hamm H13i en buen estado. Se regeneran con
 `python -m medikktion generar-demos`.
 
+## Cómo viaja la información
+
+1. **Máquina → portátil (cable):** lector RP1210 en el conector de diagnóstico, USB al portátil. Solo lectura.
+2. **Portátil → nube (internet, normalmente la zona Wi-Fi del móvil):** cada 2 s se sube el estado completo
+   de la máquina a Firestore con la clave de servicio.
+3. **Nube → móviles:** la app está suscrita al documento y recibe cada cambio al instante (< 1 s).
+4. **Vuelta:** "Enviar informe" en la app → el portátil genera el PDF y lo manda por Gmail.
+
+**A prueba de cortes:** la subida va en un hilo aparte con reintentos (2 → 60 s), copia local cada 5 s,
+sesiones terminadas sin conexión en `sesiones/pendientes/` (se suben al arrancar o con
+`python -m medikktion subir-pendientes`), informes en espera, y aviso **SIN SEÑAL** en la app si el portátil
+deja de enviar más de 20 s. Probar el aviso en la demo web: añadir `?corte=1` a la dirección.
+
 ## Protocolos y bibliotecas
 
 | Protocolo | Para qué máquinas | Biblioteca | Lector |
@@ -61,7 +74,7 @@ python3 -m medikktion demo --escenario cat320 --segundos 20   # Caterpillar con 
 python3 -m medikktion demo --escenario arjes --segundos 20    # Arjes con centralita de otra máquina
 python3 -m medikktion demo --escenario hamm --segundos 20     # Hamm sin manipulación
 python3 -m medikktion demo --escenario fuchs --segundos 20    # Fuchs MHL: J1939 + controlador UDS
-python3 -m pytest -q                                           # 24 pruebas automáticas
+python3 -m pytest -q                                           # 28 pruebas automáticas
 ```
 En Windows usa `py` en lugar de `python3`, o directamente `diagnostico.bat` → opción 3.
 Genera `sesiones/<id>.json` y `sesiones/<id>.pdf`.

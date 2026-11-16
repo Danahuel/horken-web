@@ -17,13 +17,13 @@ import sys
 import threading
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import can
 
 from . import collector, report, simulator
-from .sinks import FirestoreSink, LocalSink
+from .sinks import FirestoreSink, LocalSink, ResilientSink
 
 INTERFACES = """Adaptadores compatibles:
   rp1210    Nexiq USB-Link, DG DPA5, Noregon, Cat Comm Adapter, clones...   Windows   canal: nombre API (ver 'adaptadores')
@@ -45,8 +45,28 @@ def load_config(path: str | None) -> dict:
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
 
 
+def is_network_error(e: Exception) -> bool:
+    """Fallo de red (reintentar luego) frente a fallo de configuración (avisar ya)."""
+    import smtplib
+    import socket
+    if isinstance(e, (smtplib.SMTPAuthenticationError, smtplib.SMTPRecipientsRefused, smtplib.SMTPSenderRefused)):
+        return False
+    return isinstance(e, (ConnectionError, TimeoutError, socket.gaierror, socket.timeout,
+                          smtplib.SMTPServerDisconnected, smtplib.SMTPConnectError))
+
+
+def make_sink(cfg: dict, args):
+    """Con Firebase configurado: subida a prueba de cortes. Sin él: solo archivos locales."""
+    if cfg.get("firebase_credentials") and not getattr(args, "local", False):
+        try:
+            return ResilientSink(FirestoreSink(cfg["firebase_credentials"]), args.carpeta)
+        except Exception as e:  # noqa: BLE001
+            print(f"No se pudo iniciar Firebase ({e}); se guarda solo en el portátil.")
+    return LocalSink(args.carpeta)
+
+
 def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=None) -> dict:
-    sink = FirestoreSink(cfg["firebase_credentials"]) if cfg.get("firebase_credentials") and not args.local else LocalSink(args.carpeta)
+    sink = make_sink(cfg, args)
     dbc = None
     if getattr(args, "dbc", None):
         from .dbc import DbcDecoder
@@ -57,11 +77,18 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
     session_id = datetime.now().strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:4]
     meta = {"session_id": session_id, "operator": cfg.get("operator", args.operador),
             "location": args.ubicacion, "recipients": cfg.get("default_recipients", []),
-            "simulated": sim is not None}
+            "simulated": sim is not None, "started_at": datetime.now(timezone.utc).isoformat()}
+    resilient = isinstance(sink, ResilientSink)
+    if resilient:
+        n = sink.flush_pending()
+        if n:
+            print(f"{n} sesión(es) guardada(s) sin conexión se han subido ahora a la app.")
     sink.open_session(session_id, meta)
-    print(f"Sesión {session_id} abierta → {'Firestore (los móviles lo ven ya)' if isinstance(sink, FirestoreSink) else sink.folder}")
+    print(f"Sesión {session_id} abierta → "
+          f"{'Firebase (los móviles lo ven ya)' if resilient and sink.online else 'SIN CONEXIÓN: se guarda en el portátil y se subirá al volver' if resilient else sink.folder}")
+    pending_reports: list[list[str]] = []
 
-    def send_report(recipients):
+    def send_report(recipients) -> bool:
         snap = {**meta, **state.snapshot()}
         pdf = report.build_pdf(snap, Path(args.carpeta) / f"{session_id}.pdf")
         try:
@@ -69,9 +96,15 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
             mail(cfg["smtp"], recipients or meta["recipients"], snap, pdf)
             sink.report_done(recipients, True)
             print(f"\nInforme enviado a {recipients}")
+            return True
         except Exception as e:  # noqa: BLE001
-            sink.report_done(recipients, False, str(e))
-            print(f"\nNo se pudo enviar el informe: {e}")
+            if is_network_error(e) or (resilient and not sink.online):
+                pending_reports.append(recipients)  # sin red: se reintenta al volver la conexión
+                print(f"\nInforme en espera (sin conexión): se enviará en cuanto vuelva internet")
+            else:
+                sink.report_done(recipients, False, str(e))
+                print(f"\nNo se pudo enviar el informe: {e}")
+            return False
 
     uds_thread = None
     j1587 = None
@@ -105,6 +138,7 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
     sink.watch_report_requests(send_report)
     t_end = time.time() + args.segundos if args.segundos else None
     last_req = time.time()
+    last_retry = time.time()
     try:
         while t_end is None or time.time() < t_end:
             if car is not None:
@@ -115,8 +149,17 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
             sink.publish(snap)
             s = snap["summary"]
             live = snap["live"]
+            net = ""
+            if resilient:
+                net = (" · en línea" if sink.online else
+                       f" · SIN CONEXIÓN {time.time() - (sink.offline_since or time.time()):.0f} s (guardando en el portátil)")
             print(f"\r{s['frames']:>7} tramas · {s['ecus']} centralitas · {s['active_dtcs']} activas · "
-                  f"{live.get('rpm', {}).get('value', 0):>6.0f} rpm · {snap['tamper']['label']}   ", end="", flush=True)
+                  f"{live.get('rpm', {}).get('value', 0):>6.0f} rpm{net}      ", end="", flush=True)
+            if pending_reports and time.time() - last_retry > 15 and (not resilient or sink.online):
+                last_retry = time.time()
+                for r in list(pending_reports):
+                    pending_reports.remove(r)
+                    send_report(r)
             if time.time() - last_req > 30:  # refrescar contadores y DM2
                 if sess:
                     sess.request_all()
@@ -130,10 +173,15 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
     if uds_thread:
         uds_thread.join(timeout=15)
     snap = {**meta, **state.snapshot()}
-    sink.close(snap)
+    uploaded = sink.close(snap)
+    if resilient and not uploaded:
+        print("Sin conexión al terminar: la sesión queda guardada en el portátil y se subirá sola la próxima vez "
+              "que abras el programa (o ahora con: python -m medikktion subir-pendientes).")
     pdf = report.build_pdf(snap, Path(args.carpeta) / f"{session_id}.pdf")
     Path(args.carpeta, f"{session_id}.json").write_text(json.dumps(snap, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Informe PDF: {pdf}")
+    for r in pending_reports:
+        print(f"Informe para {', '.join(r)} sin enviar (sin conexión). El PDF está en {pdf}")
     if args.email:
         send_report(args.email)
     if j1587:
@@ -173,6 +221,9 @@ def main(argv=None):
     sub.add_parser("interfaces", help="adaptadores compatibles")
     gd = sub.add_parser("generar-demos", help="genera las 4 máquinas de demostración de la app")
     gd.add_argument("--salida", default="../app/assets/demo")
+    sp = sub.add_parser("subir-pendientes", help="sube las sesiones guardadas sin conexión")
+    sp.add_argument("--carpeta", default="sesiones")
+    sp.add_argument("--config")
     sub.add_parser("configurar", help="asistente de puesta en marcha (Firebase, Gmail, cuentas)")
     sub.add_parser("comprobar", help="comprueba que todo funciona")
     ca = sub.add_parser("codigo-app", help="genera el código de la app desde google-services.json")
@@ -193,6 +244,15 @@ def main(argv=None):
         from .demos import generate
         generate(args.salida)
         return 0
+    if args.cmd == "subir-pendientes":
+        cfg = load_config(args.config)
+        if not cfg.get("firebase_credentials"):
+            print("Firebase no está configurado (python -m medikktion configurar).")
+            return 1
+        rs = ResilientSink(FirestoreSink(cfg["firebase_credentials"]), args.carpeta)
+        n, left = rs.flush_pending(), rs.pending_count()
+        print(f"{n} sesión(es) subida(s). Pendientes: {left}.")
+        return 0 if left == 0 else 1
     if args.cmd == "configurar":
         from .setup_wizard import run_wizard
         return run_wizard(Path("."))

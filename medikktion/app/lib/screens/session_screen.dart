@@ -6,6 +6,7 @@ import '../data/repository.dart';
 import '../data/session.dart';
 import '../theme.dart';
 import '../widgets/instruments.dart';
+import '../widgets/status.dart';
 
 class SessionScreen extends StatefulWidget {
   final SessionRepository repo;
@@ -53,7 +54,7 @@ class _SessionScreenState extends State<SessionScreen> {
             Text(s.model, style: tx(context, 20, w: FontWeight.w300)),
           ]),
           actions: [
-            if (s.isLive) const Padding(padding: EdgeInsets.only(right: 18), child: LivePulse()),
+            Padding(padding: const EdgeInsets.only(right: 18), child: Center(child: LinkStatus(s))),
           ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(46),
@@ -337,8 +338,9 @@ class MeasuresTab extends StatelessWidget {
         .where((k) => s.trend[k] is Map).toList();
 
     return ListView(padding: _page, children: [
+      LinkNotice(s),
       Row(children: [
-        if (s.isLive) const LivePulse(text: 'LECTURA EN CURSO') else Text('ÚLTIMA LECTURA', style: label(context)),
+        if (s.isLive && !isStale(s)) const LivePulse(text: 'LECTURA EN CURSO') else Text('ÚLTIMA LECTURA', style: label(context)),
         const Spacer(),
         if (u != null) Text('${hhmm(u)}:${u.second.toString().padLeft(2, '0')}', style: mono(context, 12)),
       ]),

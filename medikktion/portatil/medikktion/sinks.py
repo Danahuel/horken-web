@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -64,17 +66,32 @@ class FirestoreSink:
         self.db = firestore.client()
         self._watch = None
 
+    TIMEOUT = 10  # s: sin conexión no se espera más; ResilientSink reintenta
+
+    def _created(self, meta: dict):
+        """created_at = inicio real de la sesión (aunque se suba horas después)."""
+        try:
+            return datetime.fromisoformat(meta["started_at"])
+        except (KeyError, ValueError, TypeError):
+            return self.fs.SERVER_TIMESTAMP
+
     def open_session(self, session_id: str, meta: dict) -> None:
         self.ref = self.db.collection("sessions").document(session_id)
-        self.ref.set({**meta, "status": "live", "created_at": self.fs.SERVER_TIMESTAMP}, merge=True)
+        self.ref.set({**meta, "status": "live", "created_at": self._created(meta)}, merge=True, timeout=self.TIMEOUT)
 
     def publish(self, snapshot: dict) -> None:
-        self.ref.set({**snapshot, "server_updated_at": self.fs.SERVER_TIMESTAMP}, merge=True)
+        self.ref.set({**snapshot, "server_updated_at": self.fs.SERVER_TIMESTAMP}, merge=True, timeout=self.TIMEOUT)
 
     def close(self, snapshot: dict) -> None:
         self.publish({**snapshot, "status": "finished"})
         if self._watch:
             self._watch.unsubscribe()
+
+    def upload_finished(self, session_id: str, data: dict) -> None:
+        """Sube de una vez una sesión que terminó sin conexión."""
+        ref = self.db.collection("sessions").document(session_id)
+        ref.set({**data, "status": "finished", "created_at": self._created(data),
+                 "server_updated_at": self.fs.SERVER_TIMESTAMP}, merge=True, timeout=self.TIMEOUT)
 
     def watch_report_requests(self, cb: Callable[[list[str]], None]) -> None:
         lock = threading.Lock()
@@ -102,4 +119,171 @@ class FirestoreSink:
             if h:
                 hist.append({"date": str(x.get("updated_at", ""))[:10], "engine_hours": h})
                 sw = {str(e["address"]): fingerprint(e) for e in x.get("ecus", [])}
+        return hist, sw
+
+
+class ResilientSink:
+    """Envuelve a FirestoreSink para que un corte de internet no pierda nada.
+
+    * La lectura nunca espera a la red: el último estado se deja en una "bandeja"
+      y un hilo aparte lo sube; si falla, reintenta con esperas crecientes.
+    * Cada pocos segundos se guarda una copia en el disco del portátil.
+    * El estado subido es completo (incluye 15 min de tendencias), así que al
+      volver la conexión la app recupera también lo ocurrido durante el corte.
+    * Si la sesión termina sin conexión, queda en ``pendientes/`` y se sube la
+      próxima vez (``flush_pending``) o con ``python -m medikktion subir-pendientes``.
+    """
+
+    BACKOFF = (2, 5, 10, 20, 30, 60)
+
+    def __init__(self, remote, folder: str | Path = "sesiones", local_every: float = 5.0):
+        self.remote = remote
+        self.local = LocalSink(folder)
+        self.pending_dir = Path(folder) / "pendientes"
+        self.local_every = local_every
+        self._latest: dict | None = None
+        self._lock = threading.Lock()
+        self._wake = threading.Event()
+        self._stop = threading.Event()
+        self._opened = False
+        self._last_local = 0.0
+        self.online = True
+        self.offline_since: float | None = None
+        self.last_upload: float | None = None
+        self.last_outage_s: float | None = None
+        self.failures = 0
+        self._thread = threading.Thread(target=self._uploader, daemon=True)
+
+    # --- estado de conexión (para la consola y para la app) -----------------
+    def connection_info(self) -> dict:
+        return {
+            "online": self.online,
+            "offline_since": datetime.fromtimestamp(self.offline_since, timezone.utc).isoformat() if self.offline_since else None,
+            "last_outage_s": round(self.last_outage_s) if self.last_outage_s else None,
+            "recovered_at": datetime.now(timezone.utc).isoformat() if self.online and self.last_outage_s else None,
+        }
+
+    def _mark_ok(self):
+        if not self.online and self.offline_since:
+            self.last_outage_s = time.time() - self.offline_since
+            log.warning("Conexión recuperada tras %.0f s", self.last_outage_s)
+        self.online, self.offline_since, self.failures = True, None, 0
+        self.last_upload = time.time()
+
+    def _mark_fail(self, e: Exception):
+        if self.online:
+            log.warning("Sin conexión con Firebase: %s", e)
+            self.offline_since = time.time()
+        self.online = False
+        self.failures += 1
+
+    # --- interfaz de sink ----------------------------------------------------
+    def open_session(self, session_id: str, meta: dict) -> None:
+        self.session_id, self.meta = session_id, meta
+        self.local.open_session(session_id, meta)
+        try:
+            self.remote.open_session(session_id, meta)
+            self._opened = True
+            self._mark_ok()
+        except Exception as e:  # noqa: BLE001
+            self._mark_fail(e)
+        self._thread.start()
+
+    def publish(self, snapshot: dict) -> None:
+        with self._lock:
+            self._latest = snapshot
+        self._wake.set()
+        now = time.time()
+        if now - self._last_local >= self.local_every:
+            self._last_local = now
+            try:
+                self.local.publish({**snapshot, "status": "live"})
+            except OSError as e:
+                log.warning("No se pudo guardar la copia local: %s", e)
+
+    def _push(self, snapshot: dict) -> None:
+        if not self._opened:
+            self.remote.open_session(self.session_id, self.meta)
+            self._opened = True
+        self.remote.publish({**snapshot, "connection": self.connection_info()})
+
+    def _uploader(self):
+        while not self._stop.is_set():
+            wait = None if self.online else self.BACKOFF[min(self.failures - 1, len(self.BACKOFF) - 1)]
+            self._wake.wait(timeout=wait)
+            self._wake.clear()
+            if self._stop.is_set():
+                break
+            with self._lock:
+                snap = self._latest
+            if snap is None:
+                continue
+            try:
+                was_offline = not self.online
+                self._push(snap)
+                self._mark_ok()
+                if was_offline:
+                    self._push(snap)  # segunda subida: ya lleva "recuperado tras X s" para la app
+            except Exception as e:  # noqa: BLE001
+                self._mark_fail(e)
+
+    def close(self, snapshot: dict) -> bool:
+        """True si la sesión quedó subida; False si queda pendiente en el portátil."""
+        self._stop.set()
+        self._wake.set()
+        self._thread.join(timeout=15)
+        final = {**self.meta, **snapshot, "status": "finished"}
+        self.local.publish(final)
+        try:
+            if not self._opened:
+                self.remote.open_session(self.session_id, self.meta)
+                self._opened = True
+            self.remote.close({**snapshot, "connection": self.connection_info()})
+            self._mark_ok()
+            return True
+        except Exception as e:  # noqa: BLE001
+            self._mark_fail(e)
+            self.pending_dir.mkdir(parents=True, exist_ok=True)
+            (self.pending_dir / f"{self.session_id}.json").write_text(
+                json.dumps(final, ensure_ascii=False), encoding="utf-8")
+            return False
+
+    def flush_pending(self) -> int:
+        """Sube las sesiones que terminaron sin conexión. Devuelve cuántas se subieron."""
+        if not self.pending_dir.exists():
+            return 0
+        done = 0
+        for f in sorted(self.pending_dir.glob("*.json")):
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+                self.remote.upload_finished(f.stem, data)
+                f.unlink()
+                done += 1
+            except Exception as e:  # noqa: BLE001
+                log.warning("Sesión pendiente %s no subida todavía: %s", f.stem, e)
+                break
+        return done
+
+    def pending_count(self) -> int:
+        return len(list(self.pending_dir.glob("*.json"))) if self.pending_dir.exists() else 0
+
+    def watch_report_requests(self, cb) -> None:
+        try:
+            self.remote.watch_report_requests(cb)  # el listener de Firestore se reconecta solo
+        except Exception as e:  # noqa: BLE001
+            log.warning("No se pudo escuchar peticiones de informe: %s", e)
+
+    def report_done(self, to: list[str], ok: bool, error: str | None = None) -> None:
+        try:
+            self.remote.report_done(to, ok, error)
+        except Exception as e:  # noqa: BLE001
+            log.warning("Estado del informe no subido: %s", e)
+
+    def machine_history(self, serial: str):
+        try:
+            hist, sw = self.remote.machine_history(serial)
+        except Exception:  # noqa: BLE001
+            hist, sw = [], None
+        if not hist:
+            hist, sw = self.local.machine_history(serial)
         return hist, sw

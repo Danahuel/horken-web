@@ -64,6 +64,8 @@ class DemoRepository implements SessionRepository {
   final _ctrl = StreamController<void>.broadcast();
   Timer? _timer;
   int _tick = 0;
+  /// Prueba de corte: abrir la demo con ?corte=1 deja la Fuchs sin señal.
+  final Set<String> _cut = Uri.base.queryParameters['corte'] == '1' ? {'fuchs'} : {};
 
   @override
   bool get isDemo => true;
@@ -89,6 +91,9 @@ class DemoRepository implements SessionRepository {
           .toUtc().toIso8601String();
       j['updated_at'] = mv('updated_at');
       if (j['started_at'] != null) j['started_at'] = mv('started_at');
+      if (_cut.contains(name)) {
+        j['updated_at'] = now.subtract(const Duration(seconds: 95)).toUtc().toIso8601String();
+      }
       _data[name] = j;
       _sig[name] = _signals(j);
     }
@@ -120,7 +125,7 @@ class DemoRepository implements SessionRepository {
     _tick++;
     for (final name in names) {
       final j = _data[name]!;
-      if (j['status'] != 'live') continue;
+      if (j['status'] != 'live' || _cut.contains(name)) continue;
       final sig = _sig[name]!;
       final live = (j['live'] as Map).cast<String, dynamic>();
       final phase = sin(2 * pi * _tick / (20 + names.indexOf(name) * 4));

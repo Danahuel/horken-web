@@ -105,6 +105,19 @@ Para coches y furgonetas: lector **ELM327** (USB o Bluetooth) → opción **2**.
 
 ---
 
+### Si se corta internet durante una lectura
+
+No pasa nada, sigue trabajando:
+
+- El portátil **sigue leyendo y guardando** en su disco (carpeta `sesiones`). En pantalla verás
+  `SIN CONEXIÓN … (guardando en el portátil)`.
+- En los móviles, la máquina pasa a **SIN SEÑAL · hora del último dato**.
+- Cuando vuelve la conexión, se sube todo solo, incluidas las mediciones de los últimos 15 minutos,
+  y la app avisa con **Conexión recuperada**.
+- Si pediste un informe sin conexión, se envía en cuanto vuelve.
+- Si terminas la lectura sin conexión, la sesión queda pendiente y se sube sola la próxima vez que abras el
+  programa (o a mano: `py -m medikktion subir-pendientes`).
+
 ### Si algo falla
 
 | Síntoma | Qué hacer |
