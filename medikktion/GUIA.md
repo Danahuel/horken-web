@@ -118,6 +118,13 @@ No pasa nada, sigue trabajando:
 - Si terminas la lectura sin conexión, la sesión queda pendiente y se sube sola la próxima vez que abras el
   programa (o a mano: `py -m medikktion subir-pendientes`).
 
+### Espacio en el portátil
+
+Cada lectura ocupa unos 150 KB (datos + PDF): 1.000 lecturas ≈ 150 MB. Aun así hay un límite automático:
+al empezar cada lectura se borran del portátil las de **más de 365 días** o lo que pase de **1 GB**
+(empezando por las más antiguas). Lo pendiente de subir no se borra nunca, y todo sigue en la app.
+Se cambia en `config.json` (`retencion_dias`, `max_mb_local`).
+
 ### Si algo falla
 
 | Síntoma | Qué hacer |

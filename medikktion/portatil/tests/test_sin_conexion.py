@@ -102,3 +102,31 @@ def test_network_vs_config_errors():
     assert is_network_error(socket.gaierror())
     assert is_network_error(smtplib.SMTPServerDisconnected())
     assert not is_network_error(smtplib.SMTPAuthenticationError(535, b"bad"))
+
+
+def test_prune_keeps_pending_and_recent(tmp_path):
+    import os
+    from medikktion.sinks import prune_local
+    old = tmp_path / "20240101-old.json"
+    old.write_text("x" * 1000)
+    os.utime(old, (time.time() - 400 * 86400,) * 2)        # más de un año
+    new = tmp_path / "20261118-new.json"
+    new.write_text("y" * 1000)
+    pend = tmp_path / "pendientes"
+    pend.mkdir()
+    (pend / "s.json").write_text("z")
+    os.utime(pend / "s.json", (time.time() - 900 * 86400,) * 2)
+    n, _ = prune_local(tmp_path, max_days=365, max_mb=1000)
+    assert n == 1 and not old.exists() and new.exists() and (pend / "s.json").exists()
+
+
+def test_prune_by_size(tmp_path):
+    import os
+    from medikktion.sinks import prune_local
+    for i in range(10):
+        f = tmp_path / f"s{i}.pdf"
+        f.write_bytes(b"0" * 200_000)
+        os.utime(f, (time.time() - (10 - i) * 60,) * 2)
+    n, _ = prune_local(tmp_path, max_days=365, max_mb=1)       # límite 1 MB
+    left = sorted(p.name for p in tmp_path.iterdir())
+    assert n == 5 and left == ["s5.pdf", "s6.pdf", "s7.pdf", "s8.pdf", "s9.pdf"]   # quedan las más nuevas (1,0 MB)

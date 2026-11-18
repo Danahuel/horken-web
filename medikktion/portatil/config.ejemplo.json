@@ -4,6 +4,8 @@
   "operator": "Tu nombre",
   "default_recipients": ["tu_correo@gmail.com"],
   "labour_rate": 55,
+  "retencion_dias": 365,
+  "max_mb_local": 1000,
   "smtp": {
     "host": "smtp.gmail.com",
     "port": 587,

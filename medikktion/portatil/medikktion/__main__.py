@@ -23,7 +23,7 @@ from pathlib import Path
 import can
 
 from . import collector, report, simulator
-from .sinks import FirestoreSink, LocalSink, ResilientSink
+from .sinks import FirestoreSink, LocalSink, ResilientSink, prune_local
 
 INTERFACES = """Adaptadores compatibles:
   rp1210    Nexiq USB-Link, DG DPA5, Noregon, Cat Comm Adapter, clones...   Windows   canal: nombre API (ver 'adaptadores')
@@ -79,6 +79,9 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
             "location": args.ubicacion, "recipients": cfg.get("default_recipients", []),
             "simulated": sim is not None, "started_at": datetime.now(timezone.utc).isoformat()}
     resilient = isinstance(sink, ResilientSink)
+    n_del, mb = prune_local(args.carpeta, int(cfg.get("retencion_dias", 365)), float(cfg.get("max_mb_local", 1000)))
+    if n_del:
+        print(f"Limpieza: {n_del} archivo(s) antiguo(s) borrado(s) del portátil ({mb} MB). En la app siguen disponibles.")
     if resilient:
         n = sink.flush_pending()
         if n:

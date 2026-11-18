@@ -287,3 +287,31 @@ class ResilientSink:
         if not hist:
             hist, sw = self.local.machine_history(serial)
         return hist, sw
+
+
+def prune_local(folder: str | Path = "sesiones", max_days: int = 365, max_mb: float = 1000) -> tuple[int, float]:
+    """Borra las lecturas locales más antiguas (JSON + PDF) si superan ``max_days``
+    días o si la carpeta pasa de ``max_mb`` MB. Nunca toca ``pendientes/``: lo que
+    aún no se ha subido a la nube no se borra jamás. Devuelve (archivos borrados, MB liberados)."""
+    folder = Path(folder)
+    if not folder.exists():
+        return 0, 0.0
+    files = sorted((f for f in folder.iterdir() if f.is_file() and f.suffix in (".json", ".pdf")),
+                   key=lambda f: f.stat().st_mtime)
+    now = time.time()
+    total = sum(f.stat().st_size for f in files)
+    removed, freed = 0, 0
+    for f in files:
+        size = f.stat().st_size
+        too_old = now - f.stat().st_mtime > max_days * 86400
+        too_big = total > max_mb * 1024 * 1024
+        if not (too_old or too_big):
+            break  # ordenados de más antiguo a más nuevo: el resto se queda
+        try:
+            f.unlink()
+        except OSError:
+            continue
+        removed += 1
+        freed += size
+        total -= size
+    return removed, round(freed / 1024 / 1024, 1)
