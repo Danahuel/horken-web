@@ -82,11 +82,12 @@ class Measure {
   final int decimals;
   final double min, max; // escala del instrumento
   final double? lo, hi;  // zona normal
+  final bool lowAlarm;   // en temperaturas, ir "por debajo" es solo motor frío, no avería
   const Measure(this.key, this.label, this.unit, {this.factor = 1, this.decimals = 1, required this.min,
-      required this.max, this.lo, this.hi});
+      required this.max, this.lo, this.hi, this.lowAlarm = true});
 
   double convert(num v) => v * factor;
-  bool isLow(double v) => lo != null && v < lo!;
+  bool isLow(double v) => lowAlarm && lo != null && v < lo!;
   bool isHigh(double v) => hi != null && v > hi!;
 }
 
@@ -94,10 +95,10 @@ const measures = <String, Measure>{
   'rpm': Measure('rpm', 'Régimen motor', 'rpm', decimals: 0, min: 0, max: 2500, lo: 650, hi: 2250),
   'oil_pressure_kpa': Measure('oil_pressure_kpa', 'Presión de aceite', 'bar', factor: 0.01, decimals: 2,
       min: 0, max: 7, lo: 2.5, hi: 6.5),
-  'coolant_c': Measure('coolant_c', 'Refrigerante', '°C', decimals: 2, min: 20, max: 120, lo: 70, hi: 100),
-  'oil_temp_c': Measure('oil_temp_c', 'Aceite motor', '°C', decimals: 2, min: 20, max: 130, lo: 60, hi: 115),
-  'hyd_oil_temp_c': Measure('hyd_oil_temp_c', 'Aceite hidráulico', '°C', decimals: 2, min: 10, max: 110, lo: 30, hi: 85),
-  'trans_oil_temp_c': Measure('trans_oil_temp_c', 'Aceite transmisión', '°C', decimals: 2, min: 10, max: 130, lo: 40, hi: 105),
+  'coolant_c': Measure('coolant_c', 'Refrigerante', '°C', decimals: 2, min: 20, max: 120, lo: 70, hi: 100, lowAlarm: false),
+  'oil_temp_c': Measure('oil_temp_c', 'Aceite motor', '°C', decimals: 2, min: 20, max: 130, lo: 60, hi: 115, lowAlarm: false),
+  'hyd_oil_temp_c': Measure('hyd_oil_temp_c', 'Aceite hidráulico', '°C', decimals: 2, min: 10, max: 110, lo: 30, hi: 85, lowAlarm: false),
+  'trans_oil_temp_c': Measure('trans_oil_temp_c', 'Aceite transmisión', '°C', decimals: 2, min: 10, max: 130, lo: 40, hi: 105, lowAlarm: false),
   'boost_kpa': Measure('boost_kpa', 'Sobrealimentación', 'bar', factor: 0.01, decimals: 2, min: 0, max: 3),
   'fuel_rate_lh': Measure('fuel_rate_lh', 'Consumo', 'L/h', decimals: 1, min: 0, max: 70),
   'battery_v': Measure('battery_v', 'Tensión batería', 'V', decimals: 2, min: 18, max: 32, lo: 24.5, hi: 29.5),

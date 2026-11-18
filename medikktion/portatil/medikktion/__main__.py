@@ -65,7 +65,10 @@ def make_sink(cfg: dict, args):
     return LocalSink(args.carpeta)
 
 
-def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=None) -> dict:
+def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=None,
+        stop: threading.Event | None = None, hooks: dict | None = None) -> dict:
+    """Lectura completa. ``stop`` la termina desde fuera (estación) y ``hooks``
+    recibe las funciones para grabar, enviar informe y consultar el estado."""
     sink = make_sink(cfg, args)
     dbc = None
     if getattr(args, "dbc", None):
@@ -160,11 +163,17 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
     hist, sw = sink.machine_history(state.machine_info().get("serial"))
     state.history, state.previous_software = hist, sw
     sink.watch_report_requests(send_report, set_recording)
+    if hooks is not None:
+        hooks.update({
+            "record": set_recording, "report": send_report, "session_id": session_id, "meta": meta,
+            "snapshot": lambda: {**meta, **state.snapshot(), "recording": rec.status()},
+            "connection": lambda: (sink.connection_info() | {"pending": sink.pending_count()}) if resilient else None,
+        })
     t_end = time.time() + args.segundos if args.segundos else None
     last_req = time.time()
     last_retry = time.time()
     try:
-        while t_end is None or time.time() < t_end:
+        while (t_end is None or time.time() < t_end) and not (stop is not None and stop.is_set()):
             if car is not None:
                 from .obd_car import read_car
                 read_car(car, state, cluster_km=getattr(args, "km_cuadro", None), samples=1)
@@ -251,6 +260,9 @@ def main(argv=None):
     rp.add_argument("archivo")
     rp.add_argument("--velocidad", type=float, default=1.0, help="1 = tiempo real, 5 = cinco veces más rápido")
     sub.add_parser("interfaces", help="adaptadores compatibles")
+    es = sub.add_parser("estacion", help="abre la ventana de la estación de lectura")
+    es.add_argument("--puerto-web", type=int, default=8750)
+    es.add_argument("--sin-ventana", action="store_true")
     gd = sub.add_parser("generar-demos", help="genera las 4 máquinas de demostración de la app")
     gd.add_argument("--salida", default="../app/assets/demo")
     sp = sub.add_parser("subir-pendientes", help="sube las sesiones guardadas sin conexión")
@@ -271,6 +283,10 @@ def main(argv=None):
 
     if args.cmd == "interfaces":
         print(INTERFACES)
+        return 0
+    if args.cmd == "estacion":
+        from .estacion import serve
+        serve(Path("."), args.puerto_web, open_ui=not args.sin_ventana, idle_exit=0 if args.sin_ventana else 45)
         return 0
     if args.cmd == "generar-demos":
         from .demos import generate

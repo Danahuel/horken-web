@@ -27,9 +27,15 @@ te acompaño en cada uno. Si algo sale distinto a lo que pone aquí, mándame un
 
 ## Paso 3 · Probar sin máquina (2 min)
 
-Doble clic en `diagnostico.bat` → opción **3** (prueba con máquina simulada) → escribe `fuchs`.
-Verás pasar tramas, centralitas y averías. Pulsa Ctrl+C para terminar: se genera un PDF en la carpeta `sesiones`.
-**Si esto funciona, el programa está bien instalado.**
+El instalador deja un icono **Medikktion** en el escritorio (si no aparece: doble clic en `portatil\Medikktion.bat`).
+Se abre la **estación de lectura**: una ventana negra y amarilla con todo lo necesario.
+
+1. Arriba a la izquierda, pestaña **PRUEBA** → elige una máquina simulada.
+2. Botón amarillo **EMPEZAR LECTURA**. Verás la máquina, sus averías y los valores moviéndose.
+3. **PARAR LECTURA**: queda en el **Libro de lecturas** con su informe PDF.
+
+**Si esto funciona, el programa está bien instalado.** (El menú de texto `diagnostico.bat` sigue disponible
+como alternativa.)
 
 ## Paso 4 · Crear el proyecto de Firebase (10 min)
 
@@ -87,7 +93,7 @@ Comprueba todo con `diagnostico.bat` → opción **5 (Comprobar)**: todo en `[ O
 
 ## Paso 8 · Prueba de tiempo real Alemania ↔ España (2 min)
 
-1. En el portátil: `diagnostico.bat` → opción **3** → `cat320`.
+1. En el portátil: **Medikktion** → **PRUEBA** → Caterpillar 320 → **EMPEZAR LECTURA**.
 2. En tu móvil y en el de tu mecánico aparece **CATERPILLAR 320 · en directo**, y los valores se mueven a la vez.
 3. En la app → pestaña **Informe** → *Enviar informe*. En unos segundos llega el PDF.
 
@@ -96,9 +102,10 @@ Comprueba todo con `diagnostico.bat` → opción **5 (Comprobar)**: todo en `[ O
 ## Paso 9 · El lector (cuando lo tengas)
 
 1. Instala el driver/software que venga con el lector (solo el driver).
-2. `diagnostico.bat` → opción **4**: debe aparecer el lector con su nombre (ej. `NULN2R32`).
+2. Abre **Medikktion**: en la pestaña **MÁQUINA**, el desplegable **Lector** debe mostrar el lector instalado.
 3. Conecta el cable al conector de diagnóstico de la máquina (Deutsch 9 pines, suele estar en cabina),
-   da el contacto (no hace falta arrancar), y `diagnostico.bat` → opción **1**.
+   da el contacto (no hace falta arrancar), elige tipo de máquina y lugar, activa **Grabar todas las tramas**
+   y pulsa **EMPEZAR LECTURA**. Arriba se encienden las luces **LECTOR** y **BUS CAN**.
 4. Escribe el nombre del lector, el tipo de máquina y la ciudad. Los datos aparecen en los móviles.
 
 Para coches y furgonetas: lector **ELM327** (USB o Bluetooth) → opción **2**.

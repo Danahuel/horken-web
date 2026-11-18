@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Medikktion · Estación de lectura</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <svg class="mono" viewBox="0 0 40 40" aria-hidden="true">
+        <path d="M20 2 L38 20 L20 38 L2 20 Z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M12 26 V15 L20 22.5 L28 15 V26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="miter"/>
+      </svg>
+      <span class="word">MEDIKKTION</span>
+      <span class="sep"></span>
+      <span class="sub">Estación de lectura</span>
+    </div>
+    <div class="lamps">
+      <div class="lamp" id="l-lector"><i></i><b>LECTOR</b></div>
+      <div class="lamp" id="l-bus"><i></i><b>BUS CAN</b></div>
+      <div class="lamp" id="l-nube"><i></i><b>NUBE</b></div>
+      <div class="lamp" id="l-rec"><i></i><b>REC</b></div>
+    </div>
+    <div class="clock">
+      <span id="operator"></span>
+      <span id="clock" class="mono-num">--:--:--</span>
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- ───────────── PREPARAR ───────────── -->
+    <aside class="side">
+      <div class="plate">Preparar lectura</div>
+      <nav class="modes" id="modes">
+        <button data-mode="maquina" class="on">Máquina</button>
+        <button data-mode="coche">Coche</button>
+        <button data-mode="demo">Prueba</button>
+        <button data-mode="reproducir">Grabación</button>
+      </nav>
+
+      <form id="form" autocomplete="off" onsubmit="return false">
+        <fieldset data-for="maquina">
+          <label><span class="n">01</span> Lector</label>
+          <select name="lector" id="f-lector"></select>
+          <p class="hint" id="no-lector" hidden>No hay ningún lector instalado. Instale el driver del lector
+            (crea <code>C:\Windows\RP121032.ini</code>) y vuelva a abrir esta ventana.</p>
+          <div class="row2">
+            <div>
+              <label><span class="n">02</span> Protocolo</label>
+              <div class="seg" data-name="protocolo">
+                <button type="button" data-v="CAN" class="on">CAN</button>
+                <button type="button" data-v="J1939">J1939</button>
+              </div>
+            </div>
+            <div>
+              <label><span class="n">03</span> Búsqueda UDS</label>
+              <div class="seg" data-name="uds">
+                <button type="button" data-v="1" class="on">Sí</button>
+                <button type="button" data-v="0">No</button>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset data-for="coche" hidden>
+          <label><span class="n">01</span> Puerto del ELM327</label>
+          <input name="puerto" placeholder="COM5 (vacío = buscar)">
+          <label><span class="n">02</span> Km que marca el cuadro</label>
+          <input name="km" inputmode="numeric" placeholder="para comparar con la centralita">
+        </fieldset>
+
+        <fieldset data-for="demo" hidden>
+          <label><span class="n">01</span> Máquina simulada</label>
+          <select name="escenario" id="f-escenario"></select>
+        </fieldset>
+
+        <fieldset data-for="reproducir" hidden>
+          <label><span class="n">01</span> Grabación</label>
+          <select name="archivo" id="f-archivo"></select>
+          <p class="hint" id="no-rec" hidden>Todavía no hay grabaciones.</p>
+          <label><span class="n">02</span> Velocidad</label>
+          <div class="seg" data-name="velocidad">
+            <button type="button" data-v="1" class="on">×1</button>
+            <button type="button" data-v="2">×2</button>
+            <button type="button" data-v="5">×5</button>
+            <button type="button" data-v="10">×10</button>
+          </div>
+        </fieldset>
+
+        <fieldset data-for="maquina coche demo reproducir">
+          <label data-hide="coche demo"><span class="n">·</span> Tipo de máquina</label>
+          <select name="clase" id="f-clase" data-hide="coche demo"></select>
+          <label><span class="n">·</span> Lugar</label>
+          <input name="ubicacion" placeholder="Ciudad · obra">
+          <div class="switch" data-hide="coche reproducir">
+            <span>Grabar todas las tramas</span>
+            <button type="button" class="sw" id="f-grabar" aria-pressed="false"><i></i></button>
+          </div>
+        </fieldset>
+      </form>
+
+      <button class="go" id="go"><span>Empezar lectura</span><kbd>INTRO</kbd></button>
+
+      <div class="plate">Sistema</div>
+      <dl class="sys" id="sys"></dl>
+      <div class="sys-actions">
+        <button class="ghost" id="btn-check">Comprobar</button>
+        <button class="ghost" id="btn-folder">Carpeta de lecturas</button>
+      </div>
+      <pre class="check" id="check" hidden></pre>
+    </aside>
+
+    <!-- ───────────── CONTENIDO ───────────── -->
+    <section class="main" id="main"></section>
+  </main>
+
+  <footer class="tape">
+    <div class="tape-head"><span class="plate">Registro</span><span id="status-line" class="mono-num"></span></div>
+    <ol id="log"></ol>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

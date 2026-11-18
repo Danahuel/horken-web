@@ -22,6 +22,15 @@ El informe PDF se envía por email a los correos que elijáis.
 | `docs/` | Capturas e informe PDF de ejemplo |
 | `GUIA.md` | Montaje paso a paso (Windows, Firebase, Gmail, móviles) |
 
+## La estación de lectura (portátil)
+
+Icono **Medikktion** en el escritorio (o `portatil/Medikktion.bat`, o `python -m medikktion estacion`).
+Ventana propia sin consola: modos Máquina / Coche / Prueba / Grabación, botón de empezar y parar,
+lámparas de estado (lector, bus CAN, nube, grabación), valores y averías en directo, grabación, envío del
+informe, libro de lecturas con sus PDF y registro de actividad. Funciona sin internet.
+Es un servidor local (127.0.0.1:8750) abierto en una ventana de Edge en modo aplicación; se cierra solo al cerrar
+la ventana si no hay lectura en curso.
+
 ## La app
 
 Diseño grafito y oro champán (tema claro "porcelana" para trabajar al sol). Cada máquina tiene:
@@ -80,7 +89,7 @@ python3 -m medikktion demo --escenario cat320 --segundos 20   # Caterpillar con 
 python3 -m medikktion demo --escenario arjes --segundos 20    # Arjes con centralita de otra máquina
 python3 -m medikktion demo --escenario hamm --segundos 20     # Hamm sin manipulación
 python3 -m medikktion demo --escenario fuchs --segundos 20    # Fuchs MHL: J1939 + controlador UDS
-python3 -m pytest -q                                           # 31 pruebas automáticas
+python3 -m pytest -q                                           # 32 pruebas automáticas
 ```
 En Windows usa `py` en lugar de `python3`, o directamente `diagnostico.bat` → opción 3.
 Genera `sesiones/<id>.json` y `sesiones/<id>.pdf`.

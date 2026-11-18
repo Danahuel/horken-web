@@ -18,5 +18,9 @@ echo.
 echo === Lectores RP1210 instalados en este PC ===
 py -m medikktion adaptadores
 echo.
-echo Listo. Abre "diagnostico.bat" para empezar.
+echo === Acceso directo en el escritorio ===
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$d=[Environment]::GetFolderPath('Desktop'); $w=(Get-Command pyw -ErrorAction SilentlyContinue).Source; if(-not $w){$w=(Get-Command pythonw -ErrorAction SilentlyContinue).Source}; $s=(New-Object -ComObject WScript.Shell).CreateShortcut(\"$d\Medikktion.lnk\"); $s.TargetPath=$w; $s.Arguments='-m medikktion estacion'; $s.WorkingDirectory='%~dp0'; $s.IconLocation='%~dp0medikktion.ico'; $s.Description='Medikktion - estacion de lectura'; $s.Save()"
+if exist "%USERPROFILE%\Desktop\Medikktion.lnk" (echo Creado: Medikktion en el escritorio) else (echo No se pudo crear el acceso directo: usa Medikktion.bat)
+echo.
+echo Listo. Abre "Medikktion" desde el escritorio para empezar.
 pause

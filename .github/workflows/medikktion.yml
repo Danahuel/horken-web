@@ -30,6 +30,13 @@ jobs:
       - run: python -m pip install -r requirements.txt
       - run: python -m pytest -q
       - run: python -m medikktion demo --escenario fuchs --segundos 8 --carpeta sesiones
+      - name: Instalador de Windows y acceso directo del escritorio
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          call instalar_windows.bat < nul
+          if not exist "%USERPROFILE%\Desktop\Medikktion.lnk" (echo FALTA EL ACCESO DIRECTO & exit /b 1)
+          echo Acceso directo creado
 
   apk:
     runs-on: ubuntu-latest
