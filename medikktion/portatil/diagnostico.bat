@@ -13,7 +13,8 @@ echo   3. Prueba con maquina simulada
 echo   4. Ver lectores instalados
 echo   5. Comprobar que todo funciona
 echo   6. Configurar (primera vez)
-echo   7. Salir
+echo   7. Reproducir una grabacion
+echo   8. Salir
 echo ================================================
 set /p op=Elige una opcion:
 if "%op%"=="1" goto leer
@@ -22,7 +23,8 @@ if "%op%"=="3" goto demo
 if "%op%"=="4" goto lectores
 if "%op%"=="5" goto comprobar
 if "%op%"=="6" goto configurar
-if "%op%"=="7" exit /b
+if "%op%"=="7" goto reproducir
+if "%op%"=="8" exit /b
 goto menu
 
 :lectores
@@ -35,6 +37,20 @@ echo Maquinas simuladas: cat320  fuchs  arjes  hamm
 set /p esc=Cual [fuchs]: 
 if "%esc%"=="" set esc=fuchs
 py -m medikktion demo --escenario %esc% --segundos 120
+pause
+goto menu
+
+:reproducir
+echo Grabaciones disponibles:
+dir /b /o-d sesiones\grabaciones\*.blf 2>nul
+echo.
+set /p arch=Nombre del archivo (o arrastralo aqui): 
+if "%arch%"=="" goto menu
+set arch=%arch:"=%
+if not exist "%arch%" set arch=sesiones\grabaciones\%arch%
+set /p vel=Velocidad (1 = tiempo real, 5 = cinco veces mas rapido) [1]: 
+if "%vel%"=="" set vel=1
+py -m medikktion reproducir "%arch%" --velocidad %vel%
 pause
 goto menu
 
@@ -68,13 +84,17 @@ echo Tipos: excavadora_20t excavadora_grande manipuladora cargadora_ruedas dumpe
 set /p clase=Tipo de maquina:
 if "%clase%"=="" set clase=generica
 set /p ubic=Ubicacion (ej. Munich):
+set grab=
+set g=
+set /p g=Grabar todas las tramas para diagnostico? (s/N): 
+if /i "%g%"=="s" set grab=--grabar
 echo.
 echo Leyendo... los datos aparecen en el movil. Pulsa Ctrl+C para terminar y generar el informe (si pregunta "Terminar el trabajo por lotes", responde N).
-py -m medikktion leer --interfaz rp1210 --canal %canal% --dispositivo %disp% --bitrate 0 --j1587 --clase %clase% --ubicacion "%ubic%"
+py -m medikktion leer --interfaz rp1210 --canal %canal% --dispositivo %disp% --bitrate 0 --j1587 %grab% --clase %clase% --ubicacion "%ubic%"
 if errorlevel 1 (
   echo.
   echo Probando en modo J1939...
-  py -m medikktion leer --interfaz rp1210 --canal %canal% --dispositivo %disp% --protocolo J1939 --bitrate 0 --clase %clase% --ubicacion "%ubic%"
+  py -m medikktion leer --interfaz rp1210 --canal %canal% --dispositivo %disp% --protocolo J1939 --bitrate 0 %grab% --clase %clase% --ubicacion "%ubic%"
 )
 pause
 goto menu

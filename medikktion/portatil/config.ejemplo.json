@@ -6,6 +6,8 @@
   "labour_rate": 55,
   "retencion_dias": 365,
   "max_mb_local": 1000,
+  "retencion_grabaciones_dias": 90,
+  "max_mb_grabaciones": 2000,
   "smtp": {
     "host": "smtp.gmail.com",
     "port": 587,

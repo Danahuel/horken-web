@@ -80,6 +80,9 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
             "simulated": sim is not None, "started_at": datetime.now(timezone.utc).isoformat()}
     resilient = isinstance(sink, ResilientSink)
     n_del, mb = prune_local(args.carpeta, int(cfg.get("retencion_dias", 365)), float(cfg.get("max_mb_local", 1000)))
+    n2, mb2 = prune_local(Path(args.carpeta) / "grabaciones", int(cfg.get("retencion_grabaciones_dias", 90)),
+                          float(cfg.get("max_mb_grabaciones", 2000)), suffixes=(".blf",))
+    n_del, mb = n_del + n2, round(mb + mb2, 1)
     if n_del:
         print(f"Limpieza: {n_del} archivo(s) antiguo(s) borrado(s) del portátil ({mb} MB). En la app siguen disponibles.")
     if resilient:
@@ -111,6 +114,21 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
 
     uds_thread = None
     j1587 = None
+    from .recorder import Recorder
+    rec = Recorder(args.carpeta, session_id)
+
+    def set_recording(active: bool):
+        if sess is None:
+            print("\nGrabación no disponible en este modo (OBD con ELM327).")
+            return
+        if active and not rec.active:
+            path = rec.start(sess.notifier)
+            print(f"\nGRABANDO tramas en {path}")
+            threading.Thread(target=sess.request_all, daemon=True).start()  # que la grabación incluya horas, DM2, software...
+        elif not active and rec.active:
+            path = rec.stop()
+            print(f"\nGrabación guardada: {path} ({rec.frames} tramas)")
+        sink.publish({**state.snapshot(), "recording": rec.status()})
 
     def uds_scan():
         from .uds import UdsScanner
@@ -119,6 +137,9 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
 
     if sess:
         sess.start()
+        if getattr(args, "grabar", False):
+            rec.start(sess.notifier)   # antes de pedir nada: la grabación queda completa
+            print(f"GRABANDO tramas en {rec.path}")
         time.sleep(1.5)            # descubrir centralitas
         sess.request_all()
         if not getattr(args, "sin_uds", True):
@@ -138,7 +159,7 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
     time.sleep(2.0)
     hist, sw = sink.machine_history(state.machine_info().get("serial"))
     state.history, state.previous_software = hist, sw
-    sink.watch_report_requests(send_report)
+    sink.watch_report_requests(send_report, set_recording)
     t_end = time.time() + args.segundos if args.segundos else None
     last_req = time.time()
     last_retry = time.time()
@@ -148,7 +169,7 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
                 from .obd_car import read_car
                 read_car(car, state, cluster_km=getattr(args, "km_cuadro", None), samples=1)
             state.record_trend()
-            snap = state.snapshot()
+            snap = {**state.snapshot(), "recording": rec.status()}
             sink.publish(snap)
             s = snap["summary"]
             live = snap["live"]
@@ -156,8 +177,9 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
             if resilient:
                 net = (" · en línea" if sink.online else
                        f" · SIN CONEXIÓN {time.time() - (sink.offline_since or time.time()):.0f} s (guardando en el portátil)")
+            recs = f" · REC {rec.status()['mb']:.1f} MB" if rec.active else ""
             print(f"\r{s['frames']:>7} tramas · {s['ecus']} centralitas · {s['active_dtcs']} activas · "
-                  f"{live.get('rpm', {}).get('value', 0):>6.0f} rpm{net}      ", end="", flush=True)
+                  f"{live.get('rpm', {}).get('value', 0):>6.0f} rpm{recs}{net}      ", end="", flush=True)
             if pending_reports and time.time() - last_retry > 15 and (not resilient or sink.online):
                 last_retry = time.time()
                 for r in list(pending_reports):
@@ -175,7 +197,10 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
     print()
     if uds_thread:
         uds_thread.join(timeout=15)
-    snap = {**meta, **state.snapshot()}
+    if rec.active:
+        path = rec.stop()
+        print(f"Grabación guardada: {path} ({rec.frames} tramas, {rec.status()['mb']} MB)")
+    snap = {**meta, **state.snapshot(), "recording": rec.status()}
     uploaded = sink.close(snap)
     if resilient and not uploaded:
         print("Sin conexión al terminar: la sesión queda guardada en el portátil y se subirá sola la próxima vez "
@@ -209,6 +234,7 @@ def main(argv=None):
     common.add_argument("--local", action="store_true", help="no usar Firebase aunque esté configurado")
     common.add_argument("--dbc", nargs="*", help="archivos DBC del fabricante para decodificar mensajes propios")
     common.add_argument("--sin-uds", action="store_true", help="no buscar centralitas UDS")
+    common.add_argument("--grabar", action="store_true", help="grabar todas las tramas CAN (archivo .blf)")
     d = sub.add_parser("demo", parents=[common], help="probar sin adaptador con una máquina simulada")
     d.add_argument("--escenario", default="cat320", choices=list(simulator.SCENARIOS))
     r = sub.add_parser("leer", parents=[common], help="leer una máquina real")
@@ -221,6 +247,9 @@ def main(argv=None):
     c = sub.add_parser("coche", parents=[common], help="coche/furgoneta por OBD-II con un ELM327")
     c.add_argument("--puerto", help="COM5, /dev/ttyUSB0... (vacío = buscar)")
     c.add_argument("--km-cuadro", type=float, help="km que marca el cuadro, para compararlos con la centralita")
+    rp = sub.add_parser("reproducir", parents=[common], help="reproduce una grabación .blf como si fuera la máquina")
+    rp.add_argument("archivo")
+    rp.add_argument("--velocidad", type=float, default=1.0, help="1 = tiempo real, 5 = cinco veces más rápido")
     sub.add_parser("interfaces", help="adaptadores compatibles")
     gd = sub.add_parser("generar-demos", help="genera las 4 máquinas de demostración de la app")
     gd.add_argument("--salida", default="../app/assets/demo")
@@ -303,6 +332,26 @@ def main(argv=None):
             sim.stop()
             machine_bus.shutdown()
             tool_bus.shutdown()
+    elif args.cmd == "reproducir":
+        from .recorder import duration, replay
+        dur = duration(args.archivo)
+        print(f"REPRODUCIENDO {args.archivo}: {dur / 60:.1f} min grabados, velocidad x{args.velocidad:g}")
+        if not args.segundos:
+            args.segundos = dur / max(args.velocidad, 0.01) + 4
+        if args.ubicacion == "":
+            args.ubicacion = f"Reproducción de {Path(args.archivo).name}"
+        mbus = can.Bus(interface="virtual", channel="replay", receive_own_messages=False)
+        tbus = can.Bus(interface="virtual", channel="replay")
+        stop = threading.Event()
+        th = threading.Thread(target=lambda: replay(args.archivo, mbus, args.velocidad, stop), daemon=True)
+        th.start()
+        try:
+            run(tbus, cfg, args, sim="replay")
+        finally:
+            stop.set()
+            th.join(timeout=2)
+            mbus.shutdown()
+            tbus.shutdown()
     elif args.cmd == "coche":
         import obd
         if args.clase == "generica":

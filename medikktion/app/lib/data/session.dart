@@ -16,6 +16,9 @@ class Session {
   Map<String, dynamic> get live => _m('live');
   Map<String, dynamic> get trend => _m('trend');
   Map<String, dynamic> get reportStatus => _m('report_status');
+  Map<String, dynamic> get recording => _m('recording');
+  bool get isRecording => recording['active'] == true;
+  bool get recordRequested => (raw['record_request'] as Map?)?['pending'] == true;
   List<Map<String, dynamic>> get dtcs => _l('dtcs');
   List<Map<String, dynamic>> get ecus => _l('ecus');
   List<String> get recipients => ((raw['recipients'] as List?) ?? []).map((e) => '$e').toList();

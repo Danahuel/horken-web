@@ -12,6 +12,8 @@ abstract class SessionRepository {
   Stream<Session?> session(String id);
   Future<void> requestReport(String id, List<String> recipients);
   Future<void> saveRecipients(String id, List<String> recipients);
+  /// Pide al portátil empezar o parar la grabación de tramas.
+  Future<void> requestRecording(String id, bool active);
   bool get isDemo;
 }
 
@@ -42,6 +44,11 @@ class FirestoreRepository implements SessionRepository {
   @override
   Future<void> saveRecipients(String id, List<String> recipients) =>
       _col.doc(id).update({'recipients': recipients});
+
+  @override
+  Future<void> requestRecording(String id, bool active) => _col.doc(id).update({
+        'record_request': {'pending': true, 'active': active, 'at': FieldValue.serverTimestamp()},
+      });
 }
 
 /// Simulación de una medida en vivo a partir de su propio historial: sigue la
@@ -150,7 +157,13 @@ class DemoRepository implements SessionRepository {
       final now = DateTime.now();
       j['updated_at'] = now.toUtc().toIso8601String();
       final sum = j['summary'] as Map;
-      sum['frames'] = ((sum['frames'] as num) + 118 + _rnd.nextInt(9)).toInt();
+      final add = 118 + _rnd.nextInt(9);
+      sum['frames'] = ((sum['frames'] as num) + add).toInt();
+      final rec = j['recording'] as Map?;
+      if (rec != null && rec['active'] == true) {
+        rec['frames'] = (rec['frames'] as num) + add;
+        rec['mb'] = (rec['frames'] as num) * 0.000021;  // ~22 bytes por trama comprimida
+      }
       if (_tick % 5 == 0) {
         final t = now.millisecondsSinceEpoch / 1000.0;
         ((j['trend'] as Map?) ?? {}).forEach((k, tr) {
@@ -197,6 +210,20 @@ class DemoRepository implements SessionRepository {
   @override
   Future<void> saveRecipients(String id, List<String> recipients) async {
     _data[id]!['recipients'] = recipients;
+    _ctrl.add(null);
+  }
+
+  @override
+  Future<void> requestRecording(String id, bool active) async {
+    final j = _data[id]!;
+    j['record_request'] = {'pending': true, 'active': active};
+    _ctrl.add(null);
+    await Future.delayed(const Duration(milliseconds: 900)); // lo que tarda el portátil en responder
+    final now = DateTime.now().toUtc();
+    j['record_request'] = {'pending': false, 'active': active};
+    j['recording'] = active
+        ? {'active': true, 'file': '${j['session_id']}.blf', 'frames': 0, 'mb': 0.0, 'since': now.toIso8601String()}
+        : {...((j['recording'] as Map?) ?? {}), 'active': false};
     _ctrl.add(null);
   }
 

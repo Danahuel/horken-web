@@ -105,6 +105,19 @@ Para coches y furgonetas: lector **ELM327** (USB o Bluetooth) → opción **2**.
 
 ---
 
+### Grabar una máquina para analizarla después (pruebas reales)
+
+En las primeras pruebas con máquinas reales, **graba siempre**:
+
+- En el portátil: al elegir la opción 1, responde **s** a "¿Grabar todas las tramas?".
+- O desde la app (tú o tu mecánico): pestaña **Centralitas** → interruptor **Grabar tramas CAN**.
+  Arriba aparece **● REC** con el tamaño.
+
+El archivo queda en `portatil\sesiones\grabaciones\` (formato BLF, 5–10 MB por hora).
+Si algo no sale bien, mándame ese archivo: reproduzco la máquina tal cual y lo corrijo.
+Para verla tú mismo otra vez: `diagnostico.bat` → opción **7 (Reproducir una grabación)**.
+Las grabaciones se borran solas a los 90 días o si pasan de 2 GB.
+
 ### Si se corta internet durante una lectura
 
 No pasa nada, sigue trabajando:

@@ -14,9 +14,9 @@ service cloud.firestore {
 
     match /sessions/{id} {
       allow read: if autorizado();
-      // Desde la app solo se pueden cambiar destinatarios y pedir el informe.
+      // Desde la app solo se pueden cambiar destinatarios, pedir el informe y activar la grabación.
       allow update: if autorizado()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipients', 'report_request']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipients', 'report_request', 'record_request']);
     }
   }
 }

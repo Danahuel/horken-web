@@ -29,7 +29,7 @@ class LocalSink:
     def close(self, snapshot: dict) -> None:
         self.publish({**snapshot, "status": "finished"})
 
-    def watch_report_requests(self, cb: Callable[[list[str]], None]) -> None:
+    def watch_report_requests(self, cb: Callable[[list[str]], None], on_record=None) -> None:
         pass  # sin app no hay peticiones remotas
 
     def report_done(self, to: list[str], ok: bool, error: str | None = None) -> None:
@@ -93,16 +93,23 @@ class FirestoreSink:
         ref.set({**data, "status": "finished", "created_at": self._created(data),
                  "server_updated_at": self.fs.SERVER_TIMESTAMP}, merge=True, timeout=self.TIMEOUT)
 
-    def watch_report_requests(self, cb: Callable[[list[str]], None]) -> None:
+    def watch_report_requests(self, cb: Callable[[list[str]], None], on_record=None) -> None:
+        """Escucha lo que pide la app: informe por email y grabar/parar la grabación."""
         lock = threading.Lock()
 
         def on_snap(docs, _changes, _ts):
             for doc in docs:
-                req = (doc.to_dict() or {}).get("report_request")
+                data = doc.to_dict() or {}
+                req = data.get("report_request")
                 if req and req.get("pending"):
                     with lock:
                         self.ref.update({"report_request.pending": False})
                         threading.Thread(target=cb, args=(req.get("recipients", []),), daemon=True).start()
+                rec = data.get("record_request")
+                if on_record and rec and rec.get("pending"):
+                    with lock:
+                        self.ref.update({"record_request.pending": False})
+                        threading.Thread(target=on_record, args=(bool(rec.get("active")),), daemon=True).start()
         self._watch = self.ref.on_snapshot(on_snap)
 
     def report_done(self, to: list[str], ok: bool, error: str | None = None) -> None:
@@ -267,9 +274,9 @@ class ResilientSink:
     def pending_count(self) -> int:
         return len(list(self.pending_dir.glob("*.json"))) if self.pending_dir.exists() else 0
 
-    def watch_report_requests(self, cb) -> None:
+    def watch_report_requests(self, cb, on_record=None) -> None:
         try:
-            self.remote.watch_report_requests(cb)  # el listener de Firestore se reconecta solo
+            self.remote.watch_report_requests(cb, on_record)  # el listener de Firestore se reconecta solo
         except Exception as e:  # noqa: BLE001
             log.warning("No se pudo escuchar peticiones de informe: %s", e)
 
@@ -289,14 +296,15 @@ class ResilientSink:
         return hist, sw
 
 
-def prune_local(folder: str | Path = "sesiones", max_days: int = 365, max_mb: float = 1000) -> tuple[int, float]:
+def prune_local(folder: str | Path = "sesiones", max_days: int = 365, max_mb: float = 1000,
+                suffixes: tuple[str, ...] = (".json", ".pdf")) -> tuple[int, float]:
     """Borra las lecturas locales más antiguas (JSON + PDF) si superan ``max_days``
     días o si la carpeta pasa de ``max_mb`` MB. Nunca toca ``pendientes/``: lo que
     aún no se ha subido a la nube no se borra jamás. Devuelve (archivos borrados, MB liberados)."""
     folder = Path(folder)
     if not folder.exists():
         return 0, 0.0
-    files = sorted((f for f in folder.iterdir() if f.is_file() and f.suffix in (".json", ".pdf")),
+    files = sorted((f for f in folder.iterdir() if f.is_file() and f.suffix in suffixes),
                    key=lambda f: f.stat().st_mtime)
     now = time.time()
     total = sum(f.stat().st_size for f in files)

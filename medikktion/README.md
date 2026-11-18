@@ -52,6 +52,12 @@ sesiones terminadas sin conexión en `sesiones/pendientes/` (se suben al arranca
 `python -m medikktion subir-pendientes`), informes en espera, y aviso **SIN SEÑAL** en la app si el portátil
 deja de enviar más de 20 s. Probar el aviso en la demo web: añadir `?corte=1` a la dirección.
 
+## Grabación y reproducción
+
+`--grabar` (o el interruptor de la app) guarda todas las tramas en `sesiones/grabaciones/*.blf`
+(Vector BLF, legible con python-can, CANalyzer, BusMaster…). `python -m medikktion reproducir archivo.blf
+[--velocidad 5]` la reproduce como si la máquina estuviera conectada: mismo diagnóstico, comprobado en pruebas.
+
 ## Protocolos y bibliotecas
 
 | Protocolo | Para qué máquinas | Biblioteca | Lector |
@@ -74,7 +80,7 @@ python3 -m medikktion demo --escenario cat320 --segundos 20   # Caterpillar con 
 python3 -m medikktion demo --escenario arjes --segundos 20    # Arjes con centralita de otra máquina
 python3 -m medikktion demo --escenario hamm --segundos 20     # Hamm sin manipulación
 python3 -m medikktion demo --escenario fuchs --segundos 20    # Fuchs MHL: J1939 + controlador UDS
-python3 -m pytest -q                                           # 28 pruebas automáticas
+python3 -m pytest -q                                           # 31 pruebas automáticas
 ```
 En Windows usa `py` en lugar de `python3`, o directamente `diagnostico.bat` → opción 3.
 Genera `sesiones/<id>.json` y `sesiones/<id>.pdf`.

@@ -6,6 +6,7 @@ import '../data/repository.dart';
 import '../data/session.dart';
 import '../theme.dart';
 import '../widgets/instruments.dart';
+import '../widgets/recording.dart';
 import '../widgets/status.dart';
 
 class SessionScreen extends StatefulWidget {
@@ -54,6 +55,7 @@ class _SessionScreenState extends State<SessionScreen> {
             Text(s.model, style: tx(context, 20, w: FontWeight.w300)),
           ]),
           actions: [
+            if (s.isRecording) Padding(padding: const EdgeInsets.only(right: 14), child: Center(child: RecChip(s))),
             Padding(padding: const EdgeInsets.only(right: 18), child: Center(child: LinkStatus(s))),
           ],
           bottom: PreferredSize(
@@ -84,7 +86,7 @@ class _SessionScreenState extends State<SessionScreen> {
           SummaryTab(s: s),
           MeasuresTab(s: s),
           FaultsTab(s: s),
-          EcusTab(s: s),
+          EcusTab(s: s, repo: widget.repo),
           ReportTab(s: s, repo: widget.repo),
         ]),
       ),
@@ -631,12 +633,15 @@ class _FaultCard extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════════════ CENTRALITAS
 class EcusTab extends StatelessWidget {
   final Session s;
-  const EcusTab({super.key, required this.s});
+  final SessionRepository repo;
+  const EcusTab({super.key, required this.s, required this.repo});
 
   @override
   Widget build(BuildContext context) {
     final p = context.p;
     return ListView(padding: _page, children: [
+      RecordingPanel(s: s, repo: repo),
+      const SizedBox(height: 22),
       Text('${s.ecus.length} unidades de control han respondido', style: tx(context, 14, color: p.text2)),
       const SizedBox(height: 16),
       for (final e in s.ecus) ...[

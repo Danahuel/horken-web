@@ -23,6 +23,8 @@ from udsoncan.connections import PythonIsoTpConnection
 from . import kb
 
 log = logging.getLogger("medikktion.uds")
+logging.getLogger("UdsClient").setLevel(logging.CRITICAL)  # "nadie contesta" es normal al buscar centralitas
+logging.getLogger("Connection").setLevel(logging.CRITICAL)
 
 # Tipo de fallo (byte FTB, ISO 15031-6 / SAE J2012) → texto
 FTB = {
