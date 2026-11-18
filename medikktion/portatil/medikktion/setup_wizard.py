@@ -202,7 +202,9 @@ def run_wizard(folder: Path = Path(".")) -> int:
         or cfg.get("smtp", {}).get("password", "")
     cfg.update({"mechanic_email": mech, "mechanic_name": mech_name,
                 "default_recipients": sorted({me, mech} - {""}),
-                "labour_rate": float(_ask("Tarifa de mano de obra €/h", str(cfg.get("labour_rate", 55)))),
+                "pais": (_ask("País donde trabajas normalmente (ES = España, DE = Alemania)", cfg.get("pais", "ES")) or "ES").upper(),
+                "labour_rate": float(_ask("Tarifa de mano de obra €/h (mínimo 75 en España, 120 en Alemania)",
+                                          str(cfg.get("labour_rate", 75)))),
                 "smtp": {"host": "smtp.gmail.com", "port": 587, "user": me, "password": app_pw,
                          "from": f"Medikktion Diagnóstico <{me}>"}})
     cfg_path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")

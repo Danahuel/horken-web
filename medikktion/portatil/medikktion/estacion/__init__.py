@@ -178,6 +178,7 @@ class Controller:
             bitrate=int(p.get("bitrate") or 0), j1587=True,
             marca=p.get("marca") or None, modelo=p.get("modelo") or None, serie_placa=p.get("serie_placa") or None,
             anio=p.get("anio") or None, horas_cuadro=p.get("horas_cuadro") or None, km_cuadro=p.get("km_cuadro") or None,
+            km_viaje=float(p.get("km_viaje") or 0), precio=p.get("precio") or None,
             escenario=p.get("escenario") or "cat320", velocidad=float(p.get("velocidad") or 1),
         )
         self.mode, self.started = mode, time.time()
@@ -266,10 +267,10 @@ class Controller:
         threading.Thread(target=self.hooks["record"], args=(active,), daemon=True).start()
         return {"ok": True}
 
-    def report(self, to: list[str]) -> dict:
+    def report(self, to: list[str], lang: str = "es") -> dict:
         if "report" not in self.hooks:
             return {"ok": False, "error": "No hay lectura en curso."}
-        threading.Thread(target=self.hooks["report"], args=(to,), daemon=True).start()
+        threading.Thread(target=self.hooks["report"], args=(to, lang), daemon=True).start()
         return {"ok": True}
 
     def check(self) -> dict:
@@ -308,10 +309,11 @@ def _slim(snap: dict | None) -> dict | None:
         "tamper": {k: snap.get("tamper", {}).get(k) for k in ("verdict", "label", "score", "reported_hours",
                                                             "estimated_real_hours", "evidence")},
         "mods": snap.get("modifications", {}).get("findings", []), "usage": snap.get("usage", {}),
+        "purchase": snap.get("purchase", {}), "pricing": snap.get("pricing", {}),
         "lamps": snap.get("lamps", {}), "protocols": snap.get("protocols", []),
         "live": snap.get("live", {}), "recording": snap.get("recording"),
         "dtcs": [{k: d.get(k) for k in ("code", "name", "fmi_text", "severity", "active", "source_name", "cost_min_eur",
-                                       "cost_max_eur", "difficulty")} for d in snap.get("dtcs", [])][:20],
+                                       "cost_max_eur", "difficulty", "kind", "freeze")} for d in snap.get("dtcs", [])][:24],
         "ecus": [{k: e.get(k) for k in ("address_hex", "name", "protocol", "engine_hours", "active_dtcs")}
                  for e in snap.get("ecus", [])],
         "location": snap.get("location"),
@@ -367,7 +369,7 @@ def make_handler(ctl: Controller):
                 "/api/iniciar": lambda: ctl.start(p),
                 "/api/parar": ctl.stop,
                 "/api/grabar": lambda: ctl.record(bool(p.get("activo"))),
-                "/api/informe": lambda: ctl.report(p.get("destinatarios") or []),
+                "/api/informe": lambda: ctl.report(p.get("destinatarios") or [], p.get("idioma") or "es"),
                 "/api/comprobar": ctl.check,
                 "/api/abrir": lambda: ctl.open_path(p.get("que", "sesiones"), p.get("nombre", "")),
             }

@@ -40,7 +40,18 @@ WARN = colors.HexColor("#B3741A")
 DANGER = colors.HexColor("#C63A31")
 SEV = {1: INK3, 2: INK2, 3: WARN, 4: colors.HexColor("#D0682C"), 5: DANGER}
 SEV_TXT = {1: "Informativa", 2: "Leve", 3: "Moderada", 4: "Grave", 5: "Crítica"}
+KIND_TXT = {"active": "ACTIVA", "emissions": "ACTIVA (EMISIONES)", "pending": "PENDIENTE", "permanent": "PERMANENTE",
+            "emissions_prev": "EMISIONES ANTERIOR", "history": "HISTÓRICA"}
 VERDICT = {"ok": OK, "sospechoso": WARN, "manipulado": DANGER, "sin_datos": INK3}
+_LANG = "es"
+
+
+def _t(text: str) -> str:
+    """Traduce al alemán si el informe se pide en alemán."""
+    if _LANG != "de" or not text:
+        return text
+    from .report_de import tr
+    return tr(text)
 
 S_BODY = ParagraphStyle("b", fontName=F_REG, fontSize=8.8, leading=12.6, textColor=INK)
 S_SMALL = ParagraphStyle("s", parent=S_BODY, fontSize=7.6, leading=10.5, textColor=INK2)
@@ -58,7 +69,7 @@ def _n(v, d=1):
 def _spaced(text: str, html: bool = True) -> str:
     """Versalitas espaciadas; entre palabras, un hueco mayor que no se colapse."""
     gap = "&nbsp;&nbsp;&nbsp;" if html else "   "
-    return gap.join(" ".join(w) for w in text.upper().split())
+    return gap.join(" ".join(w) for w in _t(text).upper().split())
 
 
 def _section(title: str) -> Paragraph:
@@ -100,7 +111,7 @@ def _trend_chart(tr: dict, label: str, unit: str, factor: float = 1.0, decimals:
     d.add(PolyLine([c for i in range(len(v)) for c in (X(t[i]), Y(v[i]))], strokeColor=GOLD, strokeWidth=1.0))
     mins = round((t[-1] - t[0]) / 60)
     d.add(String(left, 0, f"−{mins} min", fontName=F_REG, fontSize=5.4, fillColor=INK3))
-    d.add(String(right - 14, 0, "ahora", fontName=F_REG, fontSize=5.4, fillColor=INK3))
+    d.add(String(right - 14, 0, "jetzt" if _LANG == "de" else "ahora", fontName=F_REG, fontSize=5.4, fillColor=INK3))
     d.add(String(right - 60, h - 6, f"{_n(v[-1], decimals)} {unit}", fontName=F_MED, fontSize=7, fillColor=INK))
     return d
 
@@ -140,12 +151,14 @@ def _header(canvas, doc, snapshot):
     # pie
     canvas.setFont(F_REG, 6.6)
     canvas.setFillColor(INK3)
-    canvas.drawString(17 * mm, 10 * mm, "Medikktion · diagnóstico de maquinaria pesada · documento de uso interno")
-    canvas.drawRightString(W - 17 * mm, 10 * mm, f"Página {doc.page}")
+    canvas.drawString(17 * mm, 10 * mm, _t("Medikktion · diagnóstico de maquinaria pesada · documento de uso interno"))
+    canvas.drawRightString(W - 17 * mm, 10 * mm, f"{_t('Página')} {doc.page}")
     canvas.restoreState()
 
 
-def build_pdf(snapshot: dict, path: str | Path) -> Path:
+def build_pdf(snapshot: dict, path: str | Path, lang: str = "es") -> Path:
+    global _LANG
+    _LANG = "de" if (lang or "").lower().startswith("de") else "es"
     path = Path(path)
     m, s, t = snapshot["machine"], snapshot["summary"], snapshot["tamper"]
     h = _health(snapshot)
@@ -159,14 +172,15 @@ def build_pdf(snapshot: dict, path: str | Path) -> Path:
          Spacer(1, 3),
          Paragraph(m.get("model") or "", ParagraphStyle("md", fontName=F_LIGHT, fontSize=26, leading=30, textColor=INK)),
          Spacer(1, 4),
-         Paragraph(f"{m.get('machine_class_label', '')} · nº de serie {m.get('serial') or '—'}", S_SMALL),
+         Paragraph(f"{m.get('machine_class_label', '')} · {_t('nº de serie')} {m.get('serial') or '—'}", S_SMALL),
          Paragraph(f"{snapshot.get('location') or ''} · {when} UTC"
                    + (f" · {snapshot.get('operator')}" if snapshot.get("operator") else ""), S_SMALL)],
         [Paragraph(_spaced("Índice de estado"), S_LABEL), Spacer(1, 2),
          Paragraph(str(h["score"]), ParagraphStyle("hs", fontName=F_LIGHT, fontSize=34, leading=38,
                                                    textColor={True: OK}.get(h["score"] >= 85,
                                                    GOLD if h["score"] >= 65 else WARN if h["score"] >= 40 else DANGER))),
-         Paragraph(_spaced(h["label"]), ParagraphStyle("hl", fontName=F_SEMI, fontSize=6.6, textColor=INK2))],
+         Paragraph(_spaced({"Óptimo": "Optimal", "Aceptable": "Akzeptabel", "Requiere atención": "Prüfung nötig",
+                            "Crítico": "Kritisch"}.get(h["label"], h["label"]) if _LANG == "de" else h["label"]), ParagraphStyle("hl", fontName=F_SEMI, fontSize=6.6, textColor=INK2))],
     ]], colWidths=[128 * mm, 48 * mm])
     head.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0),
                               ("LINEBEFORE", (1, 0), (1, 0), 0.6, LINE), ("LEFTPADDING", (1, 0), (1, 0), 12)]))
@@ -185,19 +199,54 @@ def build_pdf(snapshot: dict, path: str | Path) -> Path:
                             ("LINEAFTER", (0, 0), (-2, -1), 0.6, colors.white)]))
     el.append(kt)
 
+    # Informe de compra
+    buy = snapshot.get("purchase") or {}
+    pr = snapshot.get("pricing") or {}
+    if buy:
+        vcol = {"comprar": OK, "negociar": WARN, "no_comprar": DANGER}.get(buy.get("verdict"), INK2)
+        el.append(_section("Valoración de compra"))
+        el.append(Paragraph(f"<font color='{vcol.hexval()}'>{_t(buy['label'])}</font>",
+                            ParagraphStyle("bv", fontName=F_MED, fontSize=12.5, leading=16)))
+        rows = [["Coste para dejarla a punto", f"{_n(buy['ready_min_eur'], 0)} – {_n(buy['ready_max_eur'], 0)} €"],
+                ["  · Averías activas y permanentes", f"{_n(buy['repairs_min_eur'], 0)} – {_n(buy['repairs_max_eur'], 0)} €"],
+                ["  · Averías pendientes (riesgo)", f"hasta {_n(buy['pending_risk_eur'], 0)} €"],
+                ["  · Servicio de entrada (mantenimiento)", f"{_n(buy['entry_service_min_eur'], 0)} – {_n(buy['entry_service_max_eur'], 0)} €"],
+                ["  · Desplazamiento y diagnóstico", f"{_n(buy['visit_eur'], 0)} €"]]
+        if buy.get("hidden_hours"):
+            rows.append(["Horas ocultas", f"{_n(buy['hidden_hours'], 0)} h × {_n(buy['eur_per_hour'], 1)} €/h = "
+                                          f"{_n(buy['hidden_hours_value_eur'], 0)} €"])
+        rows.append(["Rebaja recomendada", f"{_n(buy['recommended_discount_eur'], 0)} €"])
+        if buy.get("asking_price_eur"):
+            rows += [["Precio que piden", f"{_n(buy['asking_price_eur'], 0)} €"],
+                     ["Oferta máxima recomendada", f"{_n(buy['max_offer_eur'], 0)} €"]]
+        bt = Table([[Paragraph(("  · " if a.startswith("  ") else "") + _t(a.lstrip(" ·")), S_SMALL if a.startswith("  ") else S_BODY),
+                     Paragraph(f"<font name='{F_MED}'>{_t(b)}</font>", S_BODY)] for a, b in rows],
+                   colWidths=[110 * mm, 66 * mm])
+        bt.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                                ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                                ("BACKGROUND", (0, len(rows) - (3 if buy.get('asking_price_eur') else 1)), (-1, -1), PAPER2)]))
+        el.append(bt)
+        if pr:
+            el.append(Spacer(1, 3))
+            el.append(Paragraph(_t(
+                f"Tarifas aplicadas ({pr.get('country_name', '')}): {_n(pr.get('rate'), 0)} €/h de mano de obra, "
+                f"{_n(pr.get('eur_km'), 2)} €/km, margen +{round((pr.get('parts_margin', 1) - 1) * 100)} % en piezas y "
+                f"+{round((pr.get('hours_margin', 1) - 1) * 100)} % en horas. Siempre redondeado al alza."), S_SMALL))
+
     # Horómetro
     el.append(_section("Integridad del horómetro"))
     vc = VERDICT.get(t["verdict"], INK3)
-    el.append(Paragraph(f"<font color='{vc.hexval()}'>{t['label']}</font>",
+    el.append(Paragraph(f"<font color='{vc.hexval()}'>{_t(t['label'])}</font>",
                         ParagraphStyle("v", fontName=F_MED, fontSize=12, leading=15)))
-    el.append(Paragraph(f"{t['checks']} comprobaciones cruzadas · índice de sospecha {t['score']}/100 · "
-                        f"horas registradas {_n(t.get('reported_hours'))} h"
-                        + (f" · <b>horas reales estimadas ≈ {_n(t['estimated_real_hours'], 0)} h</b>"
+    el.append(Paragraph(_t(f"{t['checks']} comprobaciones cruzadas · índice de sospecha {t['score']}/100 · "
+                           f"horas registradas {_n(t.get('reported_hours'))} h")
+                        + (f" · <b>{_t('horas reales estimadas')} ≈ {_n(t['estimated_real_hours'], 0)} h</b>"
                            if t.get("estimated_real_hours") else ""), S_SMALL))
     el.append(Spacer(1, 6))
     for e in t["evidence"]:
         mark = "<font color='#23855D'>✓</font>" if e["level"] == "ok" else "<font color='#C63A31'>!</font>"
-        el.append(Paragraph(f"{mark}&nbsp;&nbsp;<font name='{F_MED}'>{e['title']}</font> — {e['detail']}", S_BODY))
+        el.append(Paragraph(f"{mark}&nbsp;&nbsp;<font name='{F_MED}'>{_t(e['title'])}</font> — {e['detail']}", S_BODY))
         el.append(Spacer(1, 3))
     u = snapshot.get("usage") or {}
     pl = (snapshot.get("machine") or {}).get("plate") or {}
@@ -222,7 +271,7 @@ def build_pdf(snapshot: dict, path: str | Path) -> Path:
             rows.append((lbl, _n(pl[k], 0) if isinstance(pl[k], (int, float)) and k != "year" else str(pl[k])))
     if rows:
         el.append(_section("Uso y procedencia"))
-        ut = Table([[Paragraph(k, S_SMALL), Paragraph(v, S_BODY)] for k, v in rows], colWidths=[60 * mm, 116 * mm])
+        ut = Table([[Paragraph(_t(k), S_SMALL), Paragraph(_t(v), S_BODY)] for k, v in rows], colWidths=[60 * mm, 116 * mm])
         ut.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("LEFTPADDING", (0, 0), (-1, -1), 0),
                                 ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]))
         el.append(ut)
@@ -230,7 +279,7 @@ def build_pdf(snapshot: dict, path: str | Path) -> Path:
     if mods.get("findings"):
         el.append(_section("Modificaciones detectadas"))
         for f in mods["findings"]:
-            el.append(Paragraph(f"<font color='#C63A31'>!</font>&nbsp;&nbsp;<font name='{F_MED}'>{f['title']}</font> — "
+            el.append(Paragraph(f"<font color='#C63A31'>!</font>&nbsp;&nbsp;<font name='{F_MED}'>{_t(f['title'])}</font> — "
                                 f"{f['detail']}", S_BODY))
 
     # Mediciones
@@ -263,32 +312,86 @@ def build_pdf(snapshot: dict, path: str | Path) -> Path:
                                 ("BOTTOMPADDING", (0, 0), (-1, -1), 5), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
         el += [Spacer(1, 4), Paragraph(_spaced("Últimos valores"), S_LABEL), Spacer(1, 3), lt]
 
+    # Mantenimiento
+    maint = snapshot.get("maintenance") or {}
+    if maint.get("items"):
+        el.append(_section(f"Mantenimiento según horas ({_n(maint['hours_basis'], 0)} h)"))
+        rows = [[Paragraph(_spaced(x), S_LABEL) for x in ("Operación", "Cada", "Próximo a", "Faltan", "Coste")]]
+        for it in maint["items"]:
+            from .report_de import MAINT_DE
+            iname = MAINT_DE.get(it.get("id"), it["name"]) if _LANG == "de" else it["name"]
+            rows.append([Paragraph(iname, S_SMALL), Paragraph(f"{_n(it['every_h'], 0)} h", S_SMALL),
+                         Paragraph(f"{_n(it['next_due_h'], 0)} h", S_SMALL),
+                         Paragraph(f"<font color='{'#B3741A' if it['soon'] else '#4C5159'}'>{_n(it['remaining_h'], 0)} h</font>", S_SMALL),
+                         Paragraph(f"{_n(it['cost_min_eur'], 0)} – {_n(it['cost_max_eur'], 0)} €", S_SMALL)])
+        mt = Table(rows, colWidths=[72 * mm, 22 * mm, 26 * mm, 22 * mm, 34 * mm], repeatRows=1)
+        mt.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                ("TOPPADDING", (0, 0), (-1, -1), 3)]))
+        el.append(mt)
+
     # Averías
     el.append(_section("Averías"))
     for d in snapshot["dtcs"]:
         sc = SEV[d["severity"]]
-        parts = "; ".join(f"{p['nombre']} ({_n(p['min'], 0)}–{_n(p['max'], 0)} €)" for p in d["parts"]) or "No requiere piezas"
+        parts = "; ".join(f"{p['nombre']} ({_n(p['min'], 0)}–{_n(p['max'], 0)} €)" for p in d["parts"]) or _t("No requiere piezas")
+        from . import report_de as DE
+        sev_txt = (DE.SEV_DE if _LANG == "de" else SEV_TXT)[d["severity"]]
+        kind_txt = (DE.KIND_DE if _LANG == "de" else KIND_TXT).get(d.get("kind"), _t("ACTIVA") if d["active"] else _t("HISTÓRICA"))
+        d_name = DE.dtc_name(d) if _LANG == "de" else d["name"]
+        d_fmi = DE.fmi_text(d) if _LANG == "de" else d["fmi_text"]
         rows = [
-            [Paragraph(f"<font name='{F_SEMI}' color='{sc.hexval()}' size='6.6'>{_spaced(SEV_TXT[d['severity']])}</font>"
+            [Paragraph(f"<font name='{F_SEMI}' color='{sc.hexval()}' size='6.6'>{_spaced(sev_txt)}</font>"
                        f"&nbsp;&nbsp;&nbsp;<font color='#8B9099' size='7'>{d['code']} · "
-                       f"{'ACTIVA' if d['active'] else 'HISTÓRICA'} · {d['source_name']}</font>", S_BODY)],
-            [Paragraph(f"<font name='{F_MED}' size='10.5'>{d['name']}</font> — {d['fmi_text']}", S_BODY)],
+                       f"{kind_txt} · {d['source_name']}</font>", S_BODY)],
+            [Paragraph(f"<font name='{F_MED}' size='10.5'>{d_name}</font> — {d_fmi}", S_BODY)],
         ]
         if d.get("warning"):
             rows.append([Paragraph(f"<font color='#C63A31' name='{F_MED}'>{d['warning']}</font>", S_BODY)])
+        fz = d.get("freeze") or {}
+        if fz:
+            bits = [f"{_n(fz['rpm'], 0)} rpm" if "rpm" in fz else "", f"refrigerante {_n(fz['coolant_c'], 0)} °C" if "coolant_c" in fz else "",
+                    f"carga {_n(fz['load_pct'], 0)} %" if "load_pct" in fz else "", f"sobrealim. {_n(fz['boost_kpa'] / 100, 2)} bar" if "boost_kpa" in fz else "",
+                    f"{_n(fz['speed_kmh'], 0)} km/h" if fz.get("speed_kmh") else ""]
+            rows.append([Paragraph(f"<font color='#8B9099'>{_t('Cuando saltó:')}</font> " + _t(" · ".join(b for b in bits if b)), S_SMALL)])
         if d["causes"]:
-            rows.append([Paragraph(f"<font color='#8B9099'>Causas probables:</font> " + "; ".join(d["causes"]), S_SMALL)])
-        rows.append([Paragraph(f"<font color='#8B9099'>Procedimiento:</font> "
+            rows.append([Paragraph(f"<font color='#8B9099'>{_t('Causas probables:')}</font> " + "; ".join(d["causes"]), S_SMALL)])
+        rows.append([Paragraph(f"<font color='#8B9099'>{_t('Procedimiento:')}</font> "
                                + "  ".join(f"<b>{i + 1}</b>. {x}" for i, x in enumerate(d["steps"])), S_SMALL)])
-        rows.append([Paragraph(f"<font color='#8B9099'>Piezas:</font> {parts} · <font color='#8B9099'>Mano de obra:</font> "
-                               f"{_n(d['labour_hours'])} h · <font color='#8B9099'>Dificultad:</font> {d['difficulty']}/5 · "
-                               f"<font name='{F_MED}' color='#A88445'>Total {_n(d['cost_min_eur'], 0)}–"
-                               f"{_n(d['cost_max_eur'], 0)} €</font>", S_SMALL)])
+        rows.append([Paragraph(f"<font color='#8B9099'>{_t('Piezas:')}</font> {parts} · <font color='#8B9099'>{_t('Mano de obra:')}</font> "
+                               f"{_n(d['labour_hours'])} h · <font color='#8B9099'>{_t('Dificultad:')}</font> {d['difficulty']}/5 · "
+                               f"<font name='{F_MED}' color='#A88445'>{_t('Recambio alternativo')} {_n(d['cost_min_eur'], 0)} € · "
+                               f"{_t('original')} {_n(d['cost_max_eur'], 0)} €</font>", S_SMALL)])
         tb = Table(rows, colWidths=[176 * mm])
         tb.setStyle(TableStyle([("LINEBEFORE", (0, 0), (0, -1), 2, sc if d["active"] else LINE),
                                 ("LEFTPADDING", (0, 0), (-1, -1), 10), ("TOPPADDING", (0, 0), (-1, -1), 2.5),
                                 ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5), ("BACKGROUND", (0, 0), (-1, -1), PAPER2)]))
         el += [KeepTogether(tb), Spacer(1, 6)]
+
+    # Fotos y notas del taller (de la app)
+    journal = snapshot.get("journal") or []
+    if journal:
+        import base64
+        import io as _io
+        from reportlab.platypus import Image as RLImage
+        el.append(_section("Fotos y notas del taller"))
+        for n in [j for j in journal if j.get("type") == "nota"]:
+            el.append(Paragraph(f"<font color='#8B9099'>{n.get('by', '')} · {str(n.get('at', ''))[:16].replace('T', ' ')}</font><br/>"
+                                f"{n.get('text', '')}", S_BODY))
+            el.append(Spacer(1, 4))
+        cells = []
+        for ph in [j for j in journal if j.get("type") == "foto" and j.get("image")][:9]:
+            try:
+                img = RLImage(_io.BytesIO(base64.b64decode(ph["image"])))
+                ratio = img.imageHeight / max(1, img.imageWidth)
+                img.drawWidth, img.drawHeight = 56 * mm, 56 * mm * ratio
+                cells.append([img, Paragraph(ph.get("text") or "", S_SMALL)])
+            except Exception:  # noqa: BLE001
+                continue
+        if cells:
+            rows = [cells[i:i + 3] for i in range(0, len(cells), 3)]
+            grid = Table([[c if c else "" for c in r] + [""] * (3 - len(r)) for r in rows], colWidths=[59 * mm] * 3)
+            grid.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
+            el.append(grid)
 
     # Centralitas
     el.append(_section("Unidades de control"))
@@ -304,9 +407,9 @@ def build_pdf(snapshot: dict, path: str | Path) -> Path:
     el.append(et)
 
     el += [Spacer(1, 12), Paragraph(
-        f"Importes orientativos (recambio alternativo – original, más mano de obra). Verificar referencias por número de serie. "
-        f"{m.get('brand_note') or ''}", S_SMALL),
-        Paragraph(f"Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}.", S_SMALL)]
+        _t("Importes orientativos (recambio alternativo – original, más mano de obra). Verificar referencias por número de serie.")
+        + f" {m.get('brand_note') or ''}", S_SMALL),
+        Paragraph(f"{_t('Generado el')} {datetime.now().strftime('%d/%m/%Y %H:%M')}.", S_SMALL)]
 
     doc = SimpleDocTemplate(str(path), pagesize=A4, leftMargin=17 * mm, rightMargin=17 * mm,
                             topMargin=38 * mm, bottomMargin=18 * mm, title="Informe Medikktion",

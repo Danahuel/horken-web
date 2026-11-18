@@ -8,3 +8,6 @@ app_flutter/android/app/google-services.json
 motor_python/sesiones/
 __pycache__/
 .pytest_cache/
+
+# Diccionario SAE J1939DA importado (licencia de SAE: no se sube)
+portatil/medikktion/kb/spn_da.json

@@ -14,6 +14,25 @@ from .analysis import fingerprint
 log = logging.getLogger("medikktion.sink")
 
 
+def _hist_entry(d: dict) -> dict:
+    """Resumen de una lectura anterior de la misma máquina."""
+    return {"date": str(d.get("updated_at", ""))[:10], "engine_hours": d.get("tamper", {}).get("reported_hours"),
+            "active": d.get("summary", {}).get("active_dtcs"), "health": (d.get("health") or {}).get("score"),
+            "location": d.get("location"), "session_id": d.get("session_id")}
+
+
+def _collect_costs(docs) -> dict[str, list[float]]:
+    """Costes reales de las órdenes de trabajo registradas en la app, por código de avería."""
+    out: dict[str, list[float]] = {}
+    for d in docs:
+        for wo in d.get("work_orders") or []:
+            try:
+                out.setdefault(str(wo["code"]), []).append(float(wo["cost_eur"]))
+            except (KeyError, TypeError, ValueError):
+                continue
+    return out
+
+
 class LocalSink:
     def __init__(self, folder: str | Path = "sesiones"):
         self.folder = Path(folder)
@@ -35,6 +54,9 @@ class LocalSink:
     def report_done(self, to: list[str], ok: bool, error: str | None = None) -> None:
         log.info("Informe %s a %s", "enviado" if ok else f"fallido ({error})", to)
 
+    def real_costs(self) -> dict:
+        return _local_real_costs(self.folder)
+
     def machine_history(self, serial: str) -> tuple[list[dict], dict | None]:
         hist, sw = [], None
         for f in sorted(self.folder.glob("*.json")):
@@ -43,9 +65,19 @@ class LocalSink:
             except Exception:
                 continue
             if d.get("machine", {}).get("serial") == serial and d.get("tamper", {}).get("reported_hours"):
-                hist.append({"date": d.get("updated_at", "")[:10], "engine_hours": d["tamper"]["reported_hours"]})
+                hist.append(_hist_entry(d))
                 sw = {str(e["address"]): fingerprint(e) for e in d.get("ecus", [])}
         return hist, sw
+
+
+def _local_real_costs(folder) -> dict:
+    docs = []
+    for f in Path(folder).glob("*.json"):
+        try:
+            docs.append(json.loads(f.read_text(encoding="utf-8")))
+        except Exception:  # noqa: BLE001
+            continue
+    return _collect_costs(docs)
 
 
 class FirestoreSink:
@@ -104,7 +136,8 @@ class FirestoreSink:
                 if req and req.get("pending"):
                     with lock:
                         self.ref.update({"report_request.pending": False})
-                        threading.Thread(target=cb, args=(req.get("recipients", []),), daemon=True).start()
+                        threading.Thread(target=cb, args=(req.get("recipients", []), req.get("lang", "es")),
+                                         daemon=True).start()
                 rec = data.get("record_request")
                 if on_record and rec and rec.get("pending"):
                     with lock:
@@ -112,8 +145,16 @@ class FirestoreSink:
                         threading.Thread(target=on_record, args=(bool(rec.get("active")),), daemon=True).start()
         self._watch = self.ref.on_snapshot(on_snap)
 
+    def journal(self) -> list[dict]:
+        """Fotos y notas que el taller añadió desde la app a esta lectura."""
+        return [d.to_dict() for d in self.ref.collection("bitacora").order_by("at").stream()]
+
     def report_done(self, to: list[str], ok: bool, error: str | None = None) -> None:
         self.ref.update({"report_status": {"ok": ok, "to": to, "error": error, "at": self.fs.SERVER_TIMESTAMP}})
+
+    def real_costs(self) -> dict:
+        docs = [d.to_dict() for d in self.db.collection("sessions").where("has_work_orders", "==", True).stream()]
+        return _collect_costs(docs)
 
     def machine_history(self, serial: str) -> tuple[list[dict], dict | None]:
         if not serial:
@@ -124,7 +165,7 @@ class FirestoreSink:
             x = d.to_dict()
             h = x.get("tamper", {}).get("reported_hours")
             if h:
-                hist.append({"date": str(x.get("updated_at", ""))[:10], "engine_hours": h})
+                hist.append(_hist_entry(x))
                 sw = {str(e["address"]): fingerprint(e) for e in x.get("ecus", [])}
         return hist, sw
 
@@ -280,11 +321,23 @@ class ResilientSink:
         except Exception as e:  # noqa: BLE001
             log.warning("No se pudo escuchar peticiones de informe: %s", e)
 
+    def journal(self) -> list[dict]:
+        try:
+            return self.remote.journal()
+        except Exception:  # noqa: BLE001
+            return []
+
     def report_done(self, to: list[str], ok: bool, error: str | None = None) -> None:
         try:
             self.remote.report_done(to, ok, error)
         except Exception as e:  # noqa: BLE001
             log.warning("Estado del informe no subido: %s", e)
+
+    def real_costs(self) -> dict:
+        try:
+            return self.remote.real_costs()
+        except Exception:  # noqa: BLE001
+            return self.local.real_costs()
 
     def machine_history(self, serial: str):
         try:

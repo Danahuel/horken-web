@@ -8,7 +8,15 @@ from pathlib import Path
 from ..j1939 import Dtc, source_name
 
 _DIR = Path(__file__).parent
-LABOUR_RATE_EUR_H = 55.0  # tarifa de mano de obra por defecto (editable en config)
+LABOUR_RATE_EUR_H = 75.0  # mínimo España (pricing.py manda: país, márgenes, tamaño de máquina)
+
+
+def as_pricing(rate_or_pricing):
+    """Acepta una tarifa €/h o un objeto Pricing."""
+    from ..pricing import Pricing
+    if isinstance(rate_or_pricing, Pricing):
+        return rate_or_pricing
+    return Pricing(rate=max(float(rate_or_pricing or 0), LABOUR_RATE_EUR_H))
 
 ELECTRICAL_STEPS = {
     "2": ["Prueba de meneo (wiggle test) del mazo y conector con la herramienta mostrando el valor en vivo",
@@ -40,7 +48,7 @@ GENERIC_ELECTRICAL_STEPS = ["Inspección visual de mazo y conector", "Medir alim
                             "Sustituir el componente si el circuito es correcto"]
 
 INJECTOR = {
-    "electrico": {"piezas": [{"nombre": "Revisión mazo de inyectores (bajo tapa de balancines)", "min": 0, "max": 150}],
+    "electrico": {"piezas": [{"nombre": "Reparación mazo de inyectores (bajo tapa de balancines)", "min": 40, "max": 250}],
                   "dificultad": 3, "horas_mo": 3},
     "condicion": {"causas": ["Inyector desgastado o con caudal incorrecto", "Combustible contaminado (agua/suciedad)",
                              "Compresión baja en ese cilindro"],
@@ -48,7 +56,7 @@ INJECTOR = {
                             "Prueba de retorno (fuga) del inyector",
                             "Medir resistencia del solenoide del inyector",
                             "Sustituir inyector y cargar su código de compensación (trim/IMA) en la ECU"],
-                  "piezas": [{"nombre": "Inyector (reconstruido → nuevo)", "min": 300, "max": 1300}],
+                  "piezas": [{"nombre": "Inyector (reconstruido → nuevo)", "min": 450, "max": 1600}],
                   "dificultad": 4, "horas_mo": 4},
 }
 
@@ -95,6 +103,18 @@ def spn_table() -> dict:
     return table
 
 
+@lru_cache
+def spn_da() -> dict:
+    """Diccionario oficial SAE J1939DA importado (si existe en este portátil)."""
+    f = _DIR / "spn_da.json"
+    if not f.exists():
+        return {}
+    try:
+        return json.loads(f.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def brands() -> dict:
     return {k: v for k, v in _load("marcas.json").items() if not k.startswith("_")}
 
@@ -129,9 +149,14 @@ def enrich_dtc(dtc: Dtc, brand: str = "generico", labour_rate: float = LABOUR_RA
         critical = entry.get("critico", False) and not electrical
     else:
         branch = {"piezas": [], "dificultad": 3, "horas_mo": 2}
-        name = (f"SPN propietario del fabricante ({dtc.spn})" if proprietary
-                else f"Parámetro SPN {dtc.spn} (no catalogado todavía)")
-        system, known, critical = "Desconocido", False, False
+        da = spn_da().get(str(dtc.spn))
+        if da:   # nombre oficial SAE, en inglés
+            name, system = da["n"], "Según SAE J1939DA"
+        else:
+            name = (f"SPN propietario del fabricante ({dtc.spn})" if proprietary
+                    else f"Parámetro SPN {dtc.spn} (no catalogado todavía)")
+            system = "Desconocido"
+        known, critical = bool(da), False
 
     if electrical:
         steps = ELECTRICAL_STEPS.get(str(dtc.fmi), GENERIC_ELECTRICAL_STEPS)
@@ -165,9 +190,8 @@ def enrich_dtc(dtc: Dtc, brand: str = "generico", labour_rate: float = LABOUR_RA
         "causes": causes, "steps": steps,
         "parts": parts,
         "difficulty": int(branch.get("dificultad", 3)),
-        "labour_hours": labour_h,
-        "cost_min_eur": round(min([p["min"] for p in parts], default=0) + labour_h * labour_rate * 0.7),
-        "cost_max_eur": round(max(parts_max, parts_min) + labour_h * labour_rate * 1.3),
+        **as_pricing(labour_rate).fault(parts, labour_h, f"SPN {dtc.spn} FMI {dtc.fmi}"),
         "known": known, "proprietary": proprietary,
+        "name_language": "en" if (not entry and spn_da().get(str(dtc.spn))) else "es",
         "brand_note": b["notas"],
     }

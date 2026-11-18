@@ -29,6 +29,8 @@ const MEASURES = {
   torque_pct: ["Par motor", "%", 1, 0, 0, 100, null, null],
 };
 
+const KIND = { active: "activa", emissions: "activa · emisiones", pending: "pendiente", permanent: "permanente",
+  emissions_prev: "emisiones anterior", history: "histórica" };
 let S = null;               // último estado del servidor
 let mode = "maquina";
 let firstLoad = true;
@@ -97,6 +99,8 @@ function formData() {
     marca: f.marca.value.trim(), modelo: f.modelo.value.trim(), serie_placa: f.serie_placa.value.trim(),
     anio: parseInt(f.anio.value) || null, horas_cuadro: parseFloat(f.horas_cuadro.value.replace(",", ".")) || null,
     km_cuadro: parseFloat(f.km_cuadro.value.replace(",", ".")) || null,
+    km_viaje: parseFloat(f.km_viaje.value.replace(",", ".")) || 0,
+    precio: parseFloat(f.precio.value.replace(/\./g, "").replace(",", ".")) || null,
     escenario: f.escenario.value, archivo: f.archivo.value, velocidad: segValue("velocidad"),
     clase: f.clase.value, ubicacion: f.ubicacion.value.trim(),
     grabar: $("#f-grabar").getAttribute("aria-pressed") === "true",
@@ -230,7 +234,7 @@ function renderReading(s) {
     $("#mail-go").onclick = async () => {
       const to = $("#mail-to").value.split(/[,; ]+/).filter((x) => x.includes("@"));
       if (!to.length) return note("Escriba al menos un correo.");
-      await api("/api/informe", { destinatarios: to });
+      await api("/api/informe", { destinatarios: to, idioma: $("#mail-lang").value });
       note("Preparando el informe…");
     };
   }
@@ -290,13 +294,25 @@ function renderReading(s) {
     <div class="evid-row"><i style="background:${e.level === "ok" ? "var(--green)" : e.level === "alta" ? "var(--red)" : "var(--amber)"}"></i>
       <div><b>${esc(e.title)}</b><p>${esc(e.detail)}</p></div></div>`).join("");
 
+  const b = s.purchase || {};
+  if (b.verdict) {
+    const col = { comprar: "var(--green)", negociar: "var(--amber)", no_comprar: "var(--red)" }[b.verdict];
+    $("#buy").innerHTML = `
+      <div class="buy-v" style="color:${col}">${esc(b.label)}</div>
+      <div><span>DEJARLA A PUNTO</span><b>${eur(b.ready_min_eur, b.ready_max_eur)}</b></div>
+      <div><span>HORAS OCULTAS</span><b>${b.hidden_hours ? num(b.hidden_hours, 0) + " h · " + num(b.hidden_hours_value_eur, 0) + " €" : "ninguna"}</b></div>
+      <div><span>REBAJA RECOMENDADA</span><b style="color:var(--yellow)">${num(b.recommended_discount_eur, 0)} €</b></div>
+      <div><span>${b.asking_price_eur ? "OFERTA MÁXIMA" : "TARIFA"}</span><b>${b.asking_price_eur ? num(b.max_offer_eur, 0) + " €"
+        : num(s.pricing?.rate, 0) + " €/h · " + esc(s.pricing?.country_name || "")}</b></div>`;
+  }
+
   const faults = s.dtcs;
   $("#faults").innerHTML = faults.length ? faults.map((d) => `
-    <div class="fault ${d.active ? "" : "hist"}">
+    <div class="fault ${d.active || d.kind === "permanent" || d.kind === "pending" ? "" : "hist"}">
       <div class="s" style="background:${sevColor(d.severity, d.active)}"></div>
-      <div><div class="c">${esc(d.code)} · ${d.active ? "activa" : "histórica"} · ${esc(d.source_name)}</div>
+      <div><div class="c">${esc(d.code)} · ${KIND[d.kind] || (d.active ? "activa" : "histórica")} · ${esc(d.source_name)}</div>
         <div class="n">${esc(d.name)}</div><div class="f">${esc(d.fmi_text)}</div></div>
-      <div class="e">${eur(d.cost_min_eur, d.cost_max_eur)}<br><span style="color:var(--text3)">dif. ${d.difficulty}/5</span></div>
+      <div class="e">alt. ${num(d.cost_min_eur, 0)} €<br>orig. ${num(d.cost_max_eur, 0)} €<br><span style="color:var(--text3)">dif. ${d.difficulty}/5</span></div>
     </div>`).join("") : `<p class="empty" style="padding:10px 0">Sin averías.</p>`;
 
   $("#ecus").innerHTML = s.ecus.map((e) => `<div class="ecu"><span class="a">${esc(e.address_hex)}</span>
@@ -323,6 +339,7 @@ function readingSkeleton() {
     </div>
     <div class="counters" id="counters"></div>
     <div class="usage" id="usage"></div>
+    <div class="buy" id="buy"></div>
     <div class="cols">
       <div><div class="sec-title">VALORES EN VIVO</div><div id="live"></div>
         <div class="sec-title" style="margin-top:22px">CENTRALITAS</div><div id="ecus"></div></div>
@@ -333,6 +350,7 @@ function readingSkeleton() {
       <div class="act-rec"><div><div class="t">Grabación de tramas</div><div class="d" id="rec-d"></div></div>
         <button type="button" class="sw" id="rec-sw" aria-pressed="false"><i></i></button></div>
       <div><div class="act-mail"><input id="mail-to" placeholder="correo@ejemplo.com, otro@ejemplo.com">
+        <select id="mail-lang" style="width:86px"><option value="es">ES</option><option value="de">DE</option></select>
         <button id="mail-go">Enviar informe</button></div></div>
     </div>`;
 }

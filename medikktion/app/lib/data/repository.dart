@@ -10,8 +10,13 @@ import 'session.dart';
 abstract class SessionRepository {
   Stream<List<Session>> sessions();
   Stream<Session?> session(String id);
-  Future<void> requestReport(String id, List<String> recipients);
+  Future<void> requestReport(String id, List<String> recipients, {String lang = 'es'});
   Future<void> saveRecipients(String id, List<String> recipients);
+  /// Fotos y notas del taller de una lectura (más recientes primero).
+  Stream<List<Map<String, dynamic>>> journal(String id);
+  Future<void> addJournal(String id, Map<String, dynamic> entry);
+  /// Reparación hecha: coste y horas reales (el portátil aprende de ellas los precios).
+  Future<void> addWorkOrder(String id, Map<String, dynamic> wo);
   /// Pide al portátil empezar o parar la grabación de tramas.
   Future<void> requestRecording(String id, bool active);
   bool get isDemo;
@@ -36,14 +41,29 @@ class FirestoreRepository implements SessionRepository {
       _col.doc(id).snapshots().map((d) => d.exists ? Session(d.id, d.data()!) : null);
 
   @override
-  Future<void> requestReport(String id, List<String> recipients) => _col.doc(id).update({
+  Future<void> requestReport(String id, List<String> recipients, {String lang = 'es'}) => _col.doc(id).update({
         'recipients': recipients,
-        'report_request': {'pending': true, 'recipients': recipients, 'at': FieldValue.serverTimestamp()},
+        'report_request': {'pending': true, 'recipients': recipients, 'lang': lang, 'at': FieldValue.serverTimestamp()},
       });
 
   @override
   Future<void> saveRecipients(String id, List<String> recipients) =>
       _col.doc(id).update({'recipients': recipients});
+
+  @override
+  Stream<List<Map<String, dynamic>>> journal(String id) => _col.doc(id).collection('bitacora')
+      .orderBy('at', descending: true).limit(60).snapshots()
+      .map((q) => q.docs.map((d) => d.data()).toList());
+
+  @override
+  Future<void> addJournal(String id, Map<String, dynamic> entry) =>
+      _col.doc(id).collection('bitacora').add({...entry, 'at': DateTime.now().toUtc().toIso8601String()});
+
+  @override
+  Future<void> addWorkOrder(String id, Map<String, dynamic> wo) => _col.doc(id).update({
+        'work_orders': FieldValue.arrayUnion([wo]),
+        'has_work_orders': true,
+      });
 
   @override
   Future<void> requestRecording(String id, bool active) => _col.doc(id).update({
@@ -200,7 +220,7 @@ class DemoRepository implements SessionRepository {
   }
 
   @override
-  Future<void> requestReport(String id, List<String> recipients) async {
+  Future<void> requestReport(String id, List<String> recipients, {String lang = 'es'}) async {
     _data[id]!['recipients'] = recipients;
     await Future.delayed(const Duration(milliseconds: 1600));
     _data[id]!['report_status'] = {'ok': true, 'to': recipients, 'at': DateTime.now().toIso8601String(), 'demo': true};
@@ -210,6 +230,35 @@ class DemoRepository implements SessionRepository {
   @override
   Future<void> saveRecipients(String id, List<String> recipients) async {
     _data[id]!['recipients'] = recipients;
+    _ctrl.add(null);
+  }
+
+  final Map<String, List<Map<String, dynamic>>> _journal = {
+    'cat320': [
+      {'type': 'nota', 'text': 'Fuga de aceite en el latiguillo del brazo, lado izquierdo. El vendedor dice que '
+          'el cuadro "siempre ha marcado esas horas".', 'by': 'mecánico', 'at': '2026-11-18T10:41:00Z'},
+    ],
+  };
+  final _jctrl = StreamController<void>.broadcast();
+
+  @override
+  Stream<List<Map<String, dynamic>>> journal(String id) async* {
+    yield List.of(_journal[id] ?? []);
+    await for (final _ in _jctrl.stream) {
+      yield List.of(_journal[id] ?? []);
+    }
+  }
+
+  @override
+  Future<void> addJournal(String id, Map<String, dynamic> entry) async {
+    _journal.putIfAbsent(id, () => []).insert(0, {...entry, 'at': DateTime.now().toUtc().toIso8601String()});
+    _jctrl.add(null);
+  }
+
+  @override
+  Future<void> addWorkOrder(String id, Map<String, dynamic> wo) async {
+    final j = _data[id]!;
+    j['work_orders'] = [...((j['work_orders'] as List?) ?? []), wo];
     _ctrl.add(null);
   }
 

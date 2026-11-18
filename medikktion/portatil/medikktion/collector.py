@@ -24,16 +24,20 @@ class MachineState:
         self.machine_class = machine_class
         self.history = history or []
         self.previous_software = previous_software
-        self.labour_rate = labour_rate
+        from .pricing import Pricing
+        self.pricing = labour_rate if isinstance(labour_rate, Pricing) else Pricing(
+            rate=max(float(labour_rate or 0), kb.LABOUR_RATE_EUR_H), machine_class=machine_class)
         self.ecus: dict = {}            # clave: dirección J1939 (int) o texto ("UDS 0x7E0", "J1587 MID 128")
         self.live: dict[str, dict] = {}
-        self.dm1: dict[int, tuple] = {}
-        self.dm2: dict[int, tuple] = {}
+        # tipo de lista → {dirección: (testigos, averías)}
+        self.dms: dict[str, dict[int, tuple]] = {k: {} for k in set(j1939.DM_KIND.values())}
+        self.freeze: dict[tuple, dict] = {}   # (dirección, spn, fmi) → imagen congelada
         self.extra_dtcs: dict[str, list[dict]] = {}   # DTC ya enriquecidos de otros protocolos
         self.protocols: set[str] = set()
         self.notes: list[str] = []
         self.extra_evidence: list[dict] = []
         self.plate: dict = {}           # datos de la placa que escribe el usuario (opcionales)
+        self.asking_price: float | None = None   # precio que piden (informe de compra)
         self.trend: dict[str, dict] = {}
         self._last_trend = 0.0
         self.frames = 0
@@ -41,6 +45,11 @@ class MachineState:
         self.lock = threading.Lock()
         self.tp = j1939.TransportReassembler()
         self.dbc = dbc                  # DBC opcional (cantools) para mensajes del fabricante
+
+    @property
+    def labour_rate(self):
+        """Compatibilidad: los enriquecedores reciben el objeto Pricing completo."""
+        return self.pricing
 
     def _ecu(self, sa) -> dict:
         return self.ecus.setdefault(sa, {"address": sa, "name": j1939.source_name(sa) if isinstance(sa, int) else str(sa),
@@ -64,10 +73,12 @@ class MachineState:
 
     def _handle(self, pgn: int, sa: int, data: bytes, can_id: int | None = None) -> None:
         ecu = self._ecu(sa)
-        if pgn == j1939.PGN_DM1:
-            self.dm1[sa] = j1939.decode_dm(data, sa, active=True)
-        elif pgn == j1939.PGN_DM2:
-            self.dm2[sa] = j1939.decode_dm(data, sa, active=False)
+        if pgn in j1939.DM_KIND:
+            kind = j1939.DM_KIND[pgn]
+            self.dms[kind][sa] = j1939.decode_dm(data, sa, active=kind in ("active", "emissions"))
+        elif pgn == j1939.PGN_DM4:
+            for fr in j1939.decode_dm4(data):
+                self.freeze[(sa, fr["spn"], fr["fmi"])] = fr
         elif pgn == j1939.PGN_VI:
             vin = j1939.decode_vin(data)
             if vin:
@@ -181,23 +192,45 @@ class MachineState:
             info = self.machine_info()
             dtcs = []
             lamps_all = {"mil": False, "red_stop": False, "amber_warning": False, "protect": False}
-            for table in (self.dm1, self.dm2):
-                for sa, (lamps, codes) in table.items():
+            merged: dict[tuple, dict] = {}
+            # Prioridad: activa > emisiones > pendiente > permanente > emisiones anteriores > histórica
+            for kind in ("active", "emissions", "pending", "permanent", "emissions_prev", "history"):
+                for sa, (lamps, codes) in self.dms[kind].items():
                     ld = lamps.as_dict()
-                    if table is self.dm1:
+                    if kind in ("active", "emissions"):
                         lamps_all = {k: lamps_all[k] or ld[k] for k in lamps_all}
                     for d in codes:
-                        e = kb.enrich_dtc(d, info["brand_key"], self.labour_rate, ld if d.active else None)
-                        e["protocol"] = "J1939"
-                        dtcs.append(e)
+                        key = (sa, d.spn, d.fmi)
+                        if key in merged:
+                            if kind not in merged[key]["kinds"]:
+                                merged[key]["kinds"].append(kind)
+                            merged[key]["occurrences"] = max(merged[key]["occurrences"], d.occurrences)
+                            continue
+                        e = kb.enrich_dtc(d, info["brand_key"], self.pricing, ld if d.active else None)
+                        e.update({"protocol": "J1939", "kind": kind, "kinds": [kind]})
+                        if kind == "pending":
+                            e["severity"] = max(1, e["severity"] - 1)
+                        fr = self.freeze.get(key)
+                        if fr:
+                            e["freeze"] = {k: v for k, v in fr.items() if k not in ("spn", "fmi")}
+                        merged[key] = e
+            dtcs.extend(merged.values())
+            permanent_cleared = [d for d in merged.values() if d["kind"] == "permanent"]
             for key, codes in self.extra_dtcs.items():
                 for d in codes:
                     dtcs.append({**d, "source": str(key)})
                     if d.get("active") and d.get("mil"):
                         lamps_all["mil"] = True
-            dtcs.sort(key=lambda d: (not d["active"], -d["severity"], str(d["code"])))
+            order = {"active": 0, "emissions": 0, "pending": 1, "permanent": 2, "emissions_prev": 3, "history": 4}
+            dtcs.sort(key=lambda d: (order.get(d.get("kind"), 0 if d["active"] else 4), -d["severity"], str(d["code"])))
             ecus = {sa: dict(e) for sa, e in self.ecus.items() if sa not in (0xF9, 0xFA)}
             usage, plate_ev, plate_mods = analysis.cross_checks(ecus, self.plate)
+            if permanent_cleared:
+                plate_ev.append({"title": "Averías permanentes que alguien borró",
+                                 "detail": f"La centralita guarda {len(permanent_cleared)} avería(s) permanente(s) que ya no "
+                                           "aparecen como activas: " + ", ".join(d["code"] for d in permanent_cleared)
+                                           + ". Se borraron sin reparar; volverán a salir al trabajar.",
+                                 "weight": 25, "level": "alta"})
             tamper = analysis.analyze_counters(ecus, self.machine_class, self.history, self.extra_evidence + plate_ev)
             mods = analysis.analyze_modifications(ecus, self.previous_software, plate_mods)
             active = [d for d in dtcs if d["active"]]
@@ -215,21 +248,35 @@ class MachineState:
                     "history_dtcs": sum(1 for d in dtcs if not d["active"] and str(d["source"]) == str(sa)),
                 })
             health = analysis.health_index(active, tamper, mods)
+            visit = self.pricing.visit()
+            from . import purchase
+            has_scr = any(k == 0x3D or k == 0x3E for k in ecus) or "def_level_pct" in self.live
+            basis = tamper.get("estimated_real_hours") or tamper.get("reported_hours")
+            maint = purchase.maintenance(basis, self.machine_class, self.pricing, has_scr)
+            buy = purchase.purchase_report(dtcs, tamper, health, usage, maint, self.pricing, self.machine_class,
+                                           self.asking_price)
             return {
                 "updated_at": datetime.now(timezone.utc).isoformat(),
                 "health": health,
                 "usage": usage,
+                "pricing": self.pricing.describe(),
+                "maintenance": maint, "purchase": buy,
+                "history": sorted(self.history, key=lambda h: h.get("date") or ""),
                 "trend": {k: {**v, "t": list(v["t"]), "v": list(v["v"])} for k, v in self.trend.items()},
                 "machine": info,
                 "lamps": lamps_all,
                 "protocols": sorted(self.protocols),
                 "notes": list(self.notes),
                 "summary": {
-                    "active_dtcs": len(active), "history_dtcs": len(dtcs) - len(active),
+                    "active_dtcs": len(active),
+                    "history_dtcs": sum(1 for d in dtcs if not d["active"] and d.get("kind") not in ("pending", "permanent")),
                     "max_severity": max([d["severity"] for d in active], default=0),
                     "ecus": len(ecu_list), "frames": self.frames,
-                    "repair_cost_min_eur": sum(d["cost_min_eur"] for d in active),
-                    "repair_cost_max_eur": sum(d["cost_max_eur"] for d in active),
+                    "repair_cost_min_eur": sum(d["cost_min_eur"] for d in active) + (visit["eur"] if active else 0),
+                    "repair_cost_max_eur": sum(d["cost_max_eur"] for d in active) + (visit["eur"] if active else 0),
+                    "visit_eur": visit["eur"] if active else 0,
+                    "pending_dtcs": sum(1 for d in dtcs if d.get("kind") == "pending"),
+                    "permanent_dtcs": sum(1 for d in dtcs if d.get("kind") == "permanent"),
                 },
                 "dtcs": dtcs, "ecus": ecu_list,
                 "live": {k: {kk: vv for kk, vv in v.items() if kk != "t"} for k, v in self.live.items()},

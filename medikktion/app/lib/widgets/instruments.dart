@@ -598,21 +598,32 @@ class DifficultyScale extends StatelessWidget {
 class HoursBars extends StatelessWidget {
   final List<(String, double)> items;
   final double? estimated;
-  const HoursBars({super.key, required this.items, this.estimated});
+  /// true = lista en el tiempo: solo es sospechoso tener MENOS horas que una lectura anterior.
+  final bool chronological;
+  const HoursBars({super.key, required this.items, this.estimated, this.chronological = false});
+
+  bool _bad(int i, double hi) {
+    final h = items[i].$2;
+    if (chronological) {
+      final before = items.take(i).map((e) => e.$2);
+      return before.isNotEmpty && h < before.reduce(math.max) - 1;
+    }
+    return (hi - h) > math.max(20, hi * 0.02);
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = context.p;
     final maxV = [...items.map((e) => e.$2), estimated ?? 0].reduce(math.max);
     final hi = items.map((e) => e.$2).reduce(math.max);
     return Column(children: [
-      for (final (name, h) in items)
+      for (final (i, (name, h)) in items.indexed)
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Expanded(child: Text(name, style: tx(context, 12.5, color: p.text2), maxLines: 1, overflow: TextOverflow.ellipsis)),
-              Text('${fmtNum(h)} h', style: tx(context, 12.5, w: FontWeight.w500,
-                  color: (hi - h) > math.max(20, hi * 0.02) ? p.danger : p.text)),
+              Text('${fmtNum(h)} h', style: tx(context, 12.5, w: FontWeight.w500, color: _bad(i, hi) ? p.danger : p.text)),
             ]),
             const SizedBox(height: 6),
             Smooth(
@@ -621,7 +632,7 @@ class HoursBars extends StatelessWidget {
               builder: (c, f) => LayoutBuilder(builder: (c, box) => Stack(children: [
                     Container(height: 3, decoration: BoxDecoration(color: p.line, borderRadius: BorderRadius.circular(2))),
                     Container(height: 3, width: box.maxWidth * f, decoration: BoxDecoration(
-                        color: (hi - h) > math.max(20, hi * 0.02) ? p.danger : p.gold,
+                        color: _bad(i, hi) ? p.danger : p.gold,
                         borderRadius: BorderRadius.circular(2))),
                   ])),
             ),

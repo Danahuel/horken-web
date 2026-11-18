@@ -121,3 +121,71 @@ def test_new_j1939_pgns():
     assert io == {"idle_fuel_l": 1000.0, "idle_hours": 250.0}
     dm21 = J.decode_params(J.PGN_DM21, b"\xff\xff\xff\xff" + (90).to_bytes(2, "little") + (600).to_bytes(2, "little"))
     assert dm21 == {"mil_min": 90.0, "cleared_min": 600.0}
+
+
+def test_dm4_freeze_frame_roundtrip_and_dm_kinds():
+    from medikktion import j1939 as J
+    raw = J.encode_dm4([{"spn": 100, "fmi": 18, "occurrences": 2, "rpm": 1650, "coolant_c": 94, "load_pct": 78,
+                         "boost_kpa": 150, "speed_kmh": 0}])
+    fr = J.decode_dm4(raw)[0]
+    assert (fr["spn"], fr["fmi"], fr["rpm"], fr["coolant_c"], fr["load_pct"], fr["boost_kpa"]) == (100, 18, 1650, 94, 78, 150)
+    st = collector.MachineState()
+    st.process(J.J1939Id(6, J.PGN_DM28, 0x3D, 0xFF).to_can_id(), J.encode_dm(J.Lamps(), [(3364, 18, 0)]))
+    st.process(J.J1939Id(6, J.PGN_DM6, 0x00, 0xFF).to_can_id(), J.encode_dm(J.Lamps(), [(102, 18, 1)]))
+    snap = st.snapshot()
+    kinds = {d["code"]: d["kind"] for d in snap["dtcs"]}
+    assert kinds == {"SPN 3364 FMI 18": "permanent", "SPN 102 FMI 18": "pending"}
+    assert snap["summary"]["active_dtcs"] == 0 and snap["summary"]["permanent_dtcs"] == 1
+    assert any(e["title"] == "Averías permanentes que alguien borró" for e in snap["tamper"]["evidence"])
+
+
+def test_maintenance_and_purchase_report():
+    from medikktion import purchase
+    from medikktion.pricing import Pricing
+    pr = Pricing.from_config({"pais": "ES"}, "excavadora_20t", travel_km=30)
+    m = purchase.maintenance(4380, "excavadora_20t", pr, has_scr=True)
+    ids = {i["id"]: i for i in m["items"]}
+    assert ids["aceite_motor"]["next_due_h"] == 4500 and ids["aceite_motor"]["remaining_h"] == 120
+    assert ids["aceite_hidraulico"]["next_due_h"] == 8000 and "transmision" not in ids     # excavadora de cadenas
+    assert "Aceite y filtro de motor" in m["entry"]["items"] and m["entry"]["cost_min_eur"] > 0
+    dtcs = [{"active": True, "kind": "active", "cost_min_eur": 1000, "cost_max_eur": 3000},
+            {"active": False, "kind": "permanent", "cost_min_eur": 500, "cost_max_eur": 900}]
+    tamper = {"verdict": "manipulado", "reported_hours": 4000, "estimated_real_hours": 9000}
+    r = purchase.purchase_report(dtcs, tamper, {"score": 30}, {}, m, pr, "excavadora_20t", asking_price=80000)
+    assert r["verdict"] == "no_comprar" and r["hidden_hours"] == 5000 and r["hidden_hours_value_eur"] == 30000
+    assert r["repairs_max_eur"] == 3900 and r["recommended_discount_eur"] >= 30000 + 3900
+    assert r["max_offer_eur"] == 80000 - r["recommended_discount_eur"] or r["max_offer_eur"] >= 80000 - r["recommended_discount_eur"]
+
+
+def test_real_repair_costs_override_estimate():
+    from medikktion.j1939 import Dtc
+    from medikktion.pricing import Pricing
+    from medikktion.sinks import _collect_costs
+    costs = _collect_costs([{"work_orders": [{"code": "SPN 3226 FMI 2", "cost_eur": 1850}]}])
+    pr = Pricing.from_config({"pais": "ES", "labour_rate": 40}, "excavadora_20t", real_costs=costs)
+    assert pr.rate == 75                                       # nunca por debajo del mínimo de España
+    d = kb.enrich_dtc(Dtc(3226, 2, 1, 0x3D, True), labour_rate=pr)
+    assert d["cost_min_eur"] >= 1850 and d["cost_max_eur"] >= 1850 * 1.1
+    assert d["price_source"] == "1 reparación(es) real(es)"
+    assert Pricing.from_config({"pais": "DE"}).rate == 120
+
+
+def test_j1939da_import(tmp_path, monkeypatch):
+    from openpyxl import Workbook
+    from medikktion import j1939da
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "SPNs & PGNs"
+    ws.append(["J1939 Digital Annex"])
+    ws.append(["PGN", "Parameter Group Label", "SPN", "SPN Name", "SPN Description", "Units"])
+    ws.append([65262, "Engine Temperature 1", 110, "Engine Coolant Temperature", "Temperature of liquid...", "°C"])
+    ws.append([64892, "DPF Control", 3700, "Aftertreatment DPF Active Regeneration Status", "State of DPF regen", "bit"])
+    xl = tmp_path / "da.xlsx"
+    wb.save(xl)
+    out = tmp_path / "spn_da.json"
+    assert j1939da.import_xlsx(xl, out) == 2
+    monkeypatch.setattr(kb, "_DIR", tmp_path)
+    kb.spn_da.cache_clear()
+    d = kb.enrich_dtc(j1939.Dtc(3700, 31, 1, 0x3D, True))
+    assert d["name"] == "Aftertreatment DPF Active Regeneration Status" and d["known"] and d["name_language"] == "en"
+    kb.spn_da.cache_clear()

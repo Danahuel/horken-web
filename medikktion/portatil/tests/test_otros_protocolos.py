@@ -36,6 +36,8 @@ class FakeObd:
     answers = {
         "VIN": "WVWZZZSIM00000001", "CALIBRATION_ID": "SIMCAL123", "CVN": "1A2B3C4D",
         "GET_DTC": [("P0118", "x"), ("P0300", "y")], "GET_CURRENT_DTC": [("P0171", "z")],
+        "PERMANENT_DTC": [("P0118", "x"), ("P0420", "w")], "FREEZE_DTC": "P0118",
+        "FF_rpm": 2150.0, "FF_coolant_c": 104.0, "FF_load_pct": 63.0, "FF_speed_kmh": 88.0,
         "DISTANCE_SINCE_DTC_CLEAR": 12.0, "WARMUPS_SINCE_DTC_CLEAR": 2.0,
         "RPM": 820.0, "COOLANT_TEMP": 88.0, "ODOMETER": 145000.0,
     }
@@ -61,6 +63,10 @@ def test_obd_car_reading():
     assert snap["tamper"]["verdict"] == "manipulado"
     assert snap["machine"]["vin"] == "WVWZZZSIM00000001"
     assert snap["live"]["rpm"]["value"] == 820.0
+    assert codes["P0420"]["kind"] == "permanent" and not codes["P0420"]["active"]
+    assert codes["P0118"]["kinds"] == ["active", "permanent"]
+    assert codes["P0118"]["freeze"] == {"rpm": 2150.0, "coolant_c": 104.0, "load_pct": 63.0, "speed_kmh": 88.0}
+    assert "Averías permanentes que alguien borró" in titles
 
 
 def test_dbc_decodes_proprietary_message(tmp_path):

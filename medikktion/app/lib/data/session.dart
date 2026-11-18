@@ -18,6 +18,15 @@ class Session {
   Map<String, dynamic> get reportStatus => _m('report_status');
   Map<String, dynamic> get recording => _m('recording');
   Map<String, dynamic> get usage => _m('usage');
+  Map<String, dynamic> get purchase => _m('purchase');
+  Map<String, dynamic> get maintenance => _m('maintenance');
+  Map<String, dynamic> get pricing => _m('pricing');
+  List<Map<String, dynamic>> get history => _l('history');
+  List<Map<String, dynamic>> get workOrders => _l('work_orders');
+  Map<String, dynamic>? workOrderFor(String code) {
+    final w = workOrders.where((x) => x['code'] == code).toList();
+    return w.isEmpty ? null : w.last;
+  }
   Map<String, dynamic> get plate => (machine['plate'] as Map?)?.cast<String, dynamic>() ?? {};
   bool get isRecording => recording['active'] == true;
   bool get recordRequested => (raw['record_request'] as Map?)?['pending'] == true;
@@ -137,6 +146,12 @@ String fmtNum(dynamic v, {int decimals = 1}) {
 }
 
 String euros(dynamic a, dynamic b) => '${fmtNum(a, decimals: 0)} – ${fmtNum(b, decimals: 0)} €';
+String eur(dynamic a) => '${fmtNum(a, decimals: 0)} €';
+
+const kindLabels = {
+  'active': 'activa', 'emissions': 'activa · emisiones', 'pending': 'pendiente', 'permanent': 'permanente',
+  'emissions_prev': 'emisiones anterior', 'history': 'histórica',
+};
 
 const _months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre',
   'noviembre', 'diciembre'];

@@ -1,210 +1,1288 @@
 {
   "_nota": "SPN estándar SAE J1939 (comunes a Caterpillar, Cummins, Deutz, Volvo, Perkins, John Deere, Liebherr...). Costes en EUR, ORIENTATIVOS: rango recambio alternativo de calidad → original. Verificar siempre la referencia exacta por número de serie (Cat SIS, Deutz, etc.). Esta base se amplía con cada reparación real.",
-
-  "100": {"nombre": "Presión de aceite motor", "sistema": "Motor · Lubricación", "critico": true,
-    "electrico": {"piezas": [{"nombre": "Sensor/emisor de presión de aceite", "min": 60, "max": 250}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"aviso": "PARAR EL MOTOR. Trabajar con baja presión de aceite destruye cojinetes y cigüeñal.",
-      "causas": ["Nivel de aceite bajo o aceite diluido con gasoil/refrigerante", "Filtro de aceite obstruido", "Viscosidad incorrecta o aceite degradado", "Bomba de aceite o válvula reguladora defectuosa", "Desgaste de cojinetes de bancada/biela"],
-      "pasos": ["Comprobar nivel y estado del aceite (olor a gasoil, aspecto lechoso)", "Medir presión real con manómetro mecánico y comparar con la lectura del ECM", "Cambiar aceite y filtro con la especificación del fabricante", "Si la presión mecánica también es baja: inspeccionar válvula reguladora y bomba", "Análisis de aceite en laboratorio para detectar metales de cojinetes"],
-      "piezas": [{"nombre": "Aceite + filtro de aceite", "min": 120, "max": 450}, {"nombre": "Bomba de aceite", "min": 400, "max": 1800}], "dificultad": 4, "horas_mo": 8}},
-
-  "98": {"nombre": "Nivel de aceite motor", "sistema": "Motor · Lubricación", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de nivel de aceite", "min": 50, "max": 220}], "dificultad": 2, "horas_mo": 1.5},
-    "condicion": {"causas": ["Consumo de aceite", "Fuga externa (retenes, cárter, turbo)", "Nivel no repuesto tras mantenimiento"],
-      "pasos": ["Comprobar nivel con la varilla en terreno llano", "Buscar fugas externas y manchas bajo la máquina", "Revisar humo azul en escape (consumo por segmentos/turbo)"],
-      "piezas": [{"nombre": "Aceite motor (rellenado)", "min": 20, "max": 80}], "dificultad": 1, "horas_mo": 0.5}},
-
-  "110": {"nombre": "Temperatura del refrigerante motor", "sistema": "Motor · Refrigeración", "critico": true,
-    "electrico": {"piezas": [{"nombre": "Sensor de temperatura de refrigerante", "min": 30, "max": 150}], "dificultad": 2, "horas_mo": 0.8},
-    "condicion": {"aviso": "Si la temperatura es alta, dejar el motor al ralentí 3-5 min y parar. No abrir el tapón en caliente.",
-      "causas": ["Radiador obstruido por polvo/paja (muy habitual en obra)", "Nivel de refrigerante bajo o fuga", "Termostato bloqueado", "Correa o bomba de agua defectuosa", "Ventilador hidráulico/viscoso sin funcionar", "Junta de culata (gases en refrigerante)"],
-      "pasos": ["Limpiar radiador, enfriador de aceite hidráulico e intercooler con aire a presión desde el lado del motor", "Comprobar nivel y fugas en frío", "Comprobar funcionamiento del ventilador a temperatura de trabajo", "Probar termostato en agua caliente", "Prueba de CO2 en el depósito de expansión si se sospecha junta de culata"],
-      "piezas": [{"nombre": "Termostato + junta", "min": 40, "max": 180}, {"nombre": "Bomba de agua", "min": 250, "max": 900}, {"nombre": "Refrigerante (20 L)", "min": 60, "max": 140}], "dificultad": 3, "horas_mo": 4}},
-
-  "111": {"nombre": "Nivel de refrigerante", "sistema": "Motor · Refrigeración", "critico": true,
-    "electrico": {"piezas": [{"nombre": "Sensor de nivel de refrigerante", "min": 40, "max": 200}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["Fuga en manguitos, radiador o bomba de agua", "Junta de culata", "Tapón de presión defectuoso"],
-      "pasos": ["Rellenar y presurizar el circuito con comprobador de presión", "Revisar manguitos, abrazaderas y radiador", "Comprobar tapón de presión"],
-      "piezas": [{"nombre": "Manguito / abrazaderas", "min": 20, "max": 120}, {"nombre": "Tapón de presión", "min": 15, "max": 60}], "dificultad": 2, "horas_mo": 2}},
-
-  "94": {"nombre": "Presión de suministro de combustible (baja presión)", "sistema": "Motor · Combustible", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de presión de combustible", "min": 70, "max": 280}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["Filtros de combustible obstruidos (causa nº1)", "Aire en el circuito / entrada de aire en tubería de aspiración", "Bomba de transferencia/cebado defectuosa", "Depósito casi vacío en pendiente"],
-      "pasos": ["Cambiar filtro primario (separador de agua) y secundario", "Purgar el circuito con la bomba de cebado", "Revisar racores y tubería de aspiración (burbujas)", "Medir presión de baja con manómetro"],
-      "piezas": [{"nombre": "Juego filtros de combustible", "min": 40, "max": 180}, {"nombre": "Bomba de transferencia eléctrica", "min": 250, "max": 900}], "dificultad": 2, "horas_mo": 1.5}},
-
-  "97": {"nombre": "Agua en el combustible", "sistema": "Motor · Combustible", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de agua en separador", "min": 30, "max": 120}], "dificultad": 1, "horas_mo": 0.5},
-    "condicion": {"aviso": "El agua en el gasoil daña inyectores y bomba de alta presión (common rail). Purgar cuanto antes.",
-      "causas": ["Combustible contaminado", "Condensación en el depósito", "Separador de agua lleno"],
-      "pasos": ["Purgar el separador de agua", "Cambiar filtro primario", "Si se repite: vaciar y limpiar depósito y revisar el proveedor de gasoil"],
-      "piezas": [{"nombre": "Filtro separador de agua", "min": 25, "max": 110}], "dificultad": 1, "horas_mo": 0.5}},
-
-  "157": {"nombre": "Presión del rail de combustible (common rail)", "sistema": "Motor · Inyección alta presión", "critico": true,
-    "electrico": {"piezas": [{"nombre": "Sensor de presión de rail", "min": 120, "max": 450}], "dificultad": 3, "horas_mo": 1.5},
-    "condicion": {"causas": ["Filtros de combustible obstruidos", "Válvula limitadora de presión del rail con fuga", "Inyector con retorno excesivo", "Bomba de alta presión desgastada", "Válvula reguladora de caudal (IMV/MPROP) defectuosa"],
-      "pasos": ["Cambiar filtros de combustible", "Prueba de retorno de inyectores (caudal de fuga por cilindro)", "Comprobar válvula limitadora del rail", "Comprobar válvula reguladora de caudal de la bomba", "Medir presión de rail en arranque (mínimo según fabricante)"],
-      "piezas": [{"nombre": "Válvula reguladora de caudal de bomba", "min": 150, "max": 500}, {"nombre": "Bomba de alta presión (reconstruida)", "min": 1200, "max": 4500}], "dificultad": 4, "horas_mo": 6}},
-
-  "102": {"nombre": "Presión de sobrealimentación (turbo)", "sistema": "Motor · Admisión", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de presión de admisión (MAP)", "min": 60, "max": 250}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["Fuga en manguitos de intercooler", "Filtro de aire obstruido", "Turbo con holgura o daño", "Actuador del turbo (VGT/wastegate) bloqueado"],
-      "pasos": ["Revisar filtro de aire y indicador de restricción", "Prueba de estanqueidad del circuito de admisión", "Comprobar holgura axial/radial del eje del turbo", "Comprobar actuador VGT con la herramienta de diagnóstico"],
-      "piezas": [{"nombre": "Filtro de aire (primario + seguridad)", "min": 60, "max": 250}, {"nombre": "Manguito intercooler", "min": 40, "max": 200}, {"nombre": "Turbocompresor", "min": 900, "max": 3500}], "dificultad": 3, "horas_mo": 4}},
-
-  "105": {"nombre": "Temperatura del colector de admisión", "sistema": "Motor · Admisión", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de temperatura de admisión", "min": 40, "max": 160}], "dificultad": 2, "horas_mo": 0.8},
-    "condicion": {"causas": ["Intercooler (ATAAC) sucio u obstruido", "Ventilador sin funcionar", "Temperatura ambiente muy alta"],
-      "pasos": ["Limpiar intercooler por fuera", "Comprobar ventilador", "Comprobar fugas internas del intercooler"],
-      "piezas": [{"nombre": "Intercooler / ATAAC", "min": 600, "max": 2500}], "dificultad": 3, "horas_mo": 5}},
-
-  "168": {"nombre": "Tensión de batería / alimentación ECU", "sistema": "Eléctrico", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Batería 12V heavy duty (unidad)", "min": 150, "max": 350}], "dificultad": 1, "horas_mo": 0.5},
-    "condicion": {"causas": ["Baterías descargadas o sulfatadas", "Alternador defectuoso o correa floja", "Bornes oxidados / masa defectuosa", "Consumo parásito con la máquina parada"],
-      "pasos": ["Medir tensión con motor parado (12,6V por batería) y en marcha (27,5-28,5V en 24V)", "Prueba de carga de baterías", "Limpiar y apretar bornes y masas al chasis y motor", "Comprobar salida del alternador"],
-      "piezas": [{"nombre": "Batería 12V heavy duty (unidad)", "min": 150, "max": 350}, {"nombre": "Alternador 24V", "min": 300, "max": 1200}], "dificultad": 2, "horas_mo": 1.5}},
-
-  "158": {"nombre": "Tensión de alimentación con llave (ECU)", "sistema": "Eléctrico", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Relé principal / fusible", "min": 10, "max": 60}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["Caída de tensión en el cableado de llave", "Relé principal defectuoso"],
-      "pasos": ["Medir tensión en el conector de la ECU con llave en ON", "Comprobar relé y fusibles"],
-      "piezas": [{"nombre": "Relé principal", "min": 10, "max": 60}], "dificultad": 2, "horas_mo": 1.0}},
-
-  "190": {"nombre": "Régimen motor / sensor de velocidad primario", "sistema": "Motor · Sensores de régimen", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de régimen/sincronización (cigüeñal)", "min": 50, "max": 250}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["Sobrerrégimen (bajada en marcha con carga)", "Corona dentada dañada", "Sensor sucio de limaduras"],
-      "pasos": ["Revisar si hubo sobrerrégimen real (histórico de eventos)", "Desmontar y limpiar sensor; comprobar entrehierro", "Comprobar la rueda fónica"],
-      "piezas": [{"nombre": "Sensor de régimen", "min": 50, "max": 250}], "dificultad": 2, "horas_mo": 1.5}},
-
-  "723": {"nombre": "Sensor de velocidad secundario (árbol de levas)", "sistema": "Motor · Sensores de régimen", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de árbol de levas", "min": 50, "max": 250}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["Desincronización entre sensores (distribución)", "Sensor sucio"],
-      "pasos": ["Limpiar sensor y comprobar entrehierro", "Calibración de sincronización (timing calibration) con herramienta del fabricante"],
-      "piezas": [{"nombre": "Sensor de árbol de levas", "min": 50, "max": 250}], "dificultad": 3, "horas_mo": 2}},
-
-  "636": {"nombre": "Sensor de posición del motor", "sistema": "Motor · Sensores de régimen", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de posición", "min": 50, "max": 250}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["Señal perdida durante el giro", "Entrehierro incorrecto"],
-      "pasos": ["Comprobar entrehierro y estado del sensor", "Revisar cableado blindado"],
-      "piezas": [{"nombre": "Sensor de posición", "min": 50, "max": 250}], "dificultad": 2, "horas_mo": 1.5}},
-
-  "651": {"nombre": "Inyector cilindro 1", "sistema": "Motor · Inyectores", "critico": false, "familia": "inyector"},
-  "652": {"nombre": "Inyector cilindro 2", "sistema": "Motor · Inyectores", "critico": false, "familia": "inyector"},
-  "653": {"nombre": "Inyector cilindro 3", "sistema": "Motor · Inyectores", "critico": false, "familia": "inyector"},
-  "654": {"nombre": "Inyector cilindro 4", "sistema": "Motor · Inyectores", "critico": false, "familia": "inyector"},
-  "655": {"nombre": "Inyector cilindro 5", "sistema": "Motor · Inyectores", "critico": false, "familia": "inyector"},
-  "656": {"nombre": "Inyector cilindro 6", "sistema": "Motor · Inyectores", "critico": false, "familia": "inyector"},
-
-  "629": {"nombre": "Centralita (ECU) nº1 - fallo interno", "sistema": "Electrónica", "critico": true,
-    "electrico": {"piezas": [{"nombre": "Revisión alimentación/masas ECU", "min": 0, "max": 50}], "dificultad": 3, "horas_mo": 2},
-    "condicion": {"causas": ["Alimentación inestable", "Fallo interno de la ECU", "Software corrupto"],
-      "pasos": ["Comprobar alimentaciones y masas directamente en el conector de la ECU", "Desconectar baterías 5 min y volver a probar", "Reprogramar con el software del fabricante (Cat ET, Deutz SerDia, etc.)", "Sustituir ECU solo tras descartar todo lo anterior (requiere programación con nº de serie)"],
-      "piezas": [{"nombre": "ECU motor (nueva/reman., con programación)", "min": 1500, "max": 5000}], "dificultad": 5, "horas_mo": 4}},
-
-  "639": {"nombre": "Red J1939 nº1 (comunicación CAN)", "sistema": "Electrónica · Red CAN", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Resistencia terminación CAN 120Ω / conector", "min": 15, "max": 80}], "dificultad": 3, "horas_mo": 2},
-    "condicion": {"causas": ["Resistencias de terminación ausentes o dañadas", "Cable CAN dañado o con humedad", "Una centralita bloqueando el bus"],
-      "pasos": ["Con baterías desconectadas medir entre CAN-H y CAN-L: ~60Ω correcto, 120Ω falta una terminación, <50Ω cortocircuito o terminación extra", "Desconectar centralitas una a una para localizar la que bloquea el bus", "Revisar conectores con humedad/corrosión"],
-      "piezas": [{"nombre": "Resistencia terminación CAN", "min": 15, "max": 80}], "dificultad": 3, "horas_mo": 3}},
-
-  "175": {"nombre": "Temperatura de aceite motor", "sistema": "Motor · Lubricación", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor temperatura aceite", "min": 40, "max": 160}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["Enfriador de aceite obstruido", "Sobrecarga prolongada", "Nivel bajo"],
-      "pasos": ["Comprobar nivel", "Revisar enfriador de aceite y termostato de aceite"],
-      "piezas": [{"nombre": "Enfriador de aceite motor", "min": 300, "max": 1200}], "dificultad": 3, "horas_mo": 4}},
-
-  "177": {"nombre": "Temperatura de aceite de transmisión", "sistema": "Transmisión", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor temperatura aceite transmisión", "min": 40, "max": 180}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["Patinamiento del convertidor de par por trabajo en marcha corta con carga", "Enfriador de transmisión obstruido", "Nivel incorrecto de aceite"],
-      "pasos": ["Comprobar nivel con el procedimiento del fabricante (motor en marcha, caliente)", "Limpiar enfriador", "Revisar hábitos de trabajo: evitar empujar con el convertidor en calado"],
-      "piezas": [{"nombre": "Aceite + filtro transmisión", "min": 150, "max": 600}], "dificultad": 3, "horas_mo": 3}},
-
-  "1638": {"nombre": "Temperatura de aceite hidráulico", "sistema": "Hidráulico", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor temperatura aceite hidráulico", "min": 40, "max": 180}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"aviso": "Aceite hidráulico por encima de ~90 °C degrada juntas y bombas. Reducir carga.",
-      "causas": ["Enfriador hidráulico obstruido (polvo)", "Válvula de alivio abriendo continuamente (trabajo contra tope)", "Bomba con fugas internas", "Nivel bajo de aceite hidráulico", "Ventilador del enfriador sin funcionar"],
-      "pasos": ["Limpiar enfriador hidráulico", "Comprobar nivel", "Medir presiones de alivio con manómetro", "Prueba de caudal de bomba si persiste"],
-      "piezas": [{"nombre": "Filtro hidráulico de retorno", "min": 60, "max": 250}, {"nombre": "Enfriador hidráulico", "min": 600, "max": 2500}], "dificultad": 3, "horas_mo": 4}},
-
-  "91": {"nombre": "Posición del acelerador / dial de régimen", "sistema": "Mandos", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Potenciómetro/dial de acelerador", "min": 80, "max": 400}], "dificultad": 2, "horas_mo": 1.5},
-    "condicion": {"causas": ["Pedal o dial desgastado"], "pasos": ["Comprobar señal en todo el recorrido con la herramienta de diagnóstico"],
-      "piezas": [{"nombre": "Potenciómetro/dial de acelerador", "min": 80, "max": 400}], "dificultad": 2, "horas_mo": 1.5}},
-
-  "27": {"nombre": "Posición de la válvula EGR", "sistema": "Emisiones · EGR", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Actuador válvula EGR", "min": 400, "max": 1500}], "dificultad": 3, "horas_mo": 3},
-    "condicion": {"causas": ["Válvula EGR carbonizada/agarrotada", "Enfriador EGR obstruido"],
-      "pasos": ["Desmontar y limpiar válvula EGR", "Prueba del actuador con herramienta del fabricante", "Revisar enfriador EGR"],
-      "piezas": [{"nombre": "Válvula EGR", "min": 400, "max": 1500}], "dificultad": 3, "horas_mo": 4}},
-
-  "641": {"nombre": "Actuador del turbo de geometría variable (VGT)", "sistema": "Motor · Admisión", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Actuador electrónico VGT", "min": 500, "max": 1800}], "dificultad": 3, "horas_mo": 3},
-    "condicion": {"causas": ["Álabes del turbo carbonizados", "Actuador defectuoso"],
-      "pasos": ["Prueba de barrido del actuador", "Limpieza del mecanismo de geometría variable", "Calibrar actuador tras sustituir"],
-      "piezas": [{"nombre": "Actuador electrónico VGT", "min": 500, "max": 1800}, {"nombre": "Turbo VGT completo", "min": 1500, "max": 4000}], "dificultad": 4, "horas_mo": 5}},
-
-  "3251": {"nombre": "Presión diferencial del filtro de partículas (DPF)", "sistema": "Emisiones · DPF", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de presión diferencial DPF", "min": 80, "max": 300}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["DPF saturado de hollín (regeneraciones interrumpidas)", "DPF con ceniza (fin de vida, requiere limpieza)", "Tubos del sensor obstruidos o rotos"],
-      "pasos": ["Revisar tubos del sensor diferencial", "Realizar regeneración estacionaria/forzada", "Si la ceniza es alta: desmontar y limpiar el DPF en máquina de limpieza"],
-      "piezas": [{"nombre": "Limpieza profesional DPF", "min": 300, "max": 700}, {"nombre": "DPF nuevo", "min": 2000, "max": 6000}], "dificultad": 3, "horas_mo": 3}},
-
-  "3719": {"nombre": "Carga de hollín del DPF", "sistema": "Emisiones · DPF", "critico": false,
-    "electrico": {"piezas": [], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["Mucho trabajo a ralentí o baja carga", "Regeneraciones inhibidas por el operador", "Consumo de aceite / inyector goteando (más hollín)"],
-      "pasos": ["Realizar regeneración estacionaria", "Revisar inyectores y turbo si se satura con frecuencia", "Instruir al operador para no inhibir la regeneración"],
-      "piezas": [{"nombre": "Limpieza profesional DPF", "min": 300, "max": 700}], "dificultad": 2, "horas_mo": 1.5}},
-
-  "3216": {"nombre": "Sensor NOx de entrada SCR", "sistema": "Emisiones · SCR", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor NOx", "min": 300, "max": 900}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["Sensor envejecido", "Fuga de escape antes del sensor"],
-      "pasos": ["Revisar fugas de escape", "Comprobar el sensor con la prueba del fabricante", "Sustituir sensor"],
-      "piezas": [{"nombre": "Sensor NOx", "min": 300, "max": 900}], "dificultad": 2, "horas_mo": 1.0}},
-
-  "3226": {"nombre": "Sensor NOx de salida SCR", "sistema": "Emisiones · SCR", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor NOx", "min": 300, "max": 900}], "dificultad": 2, "horas_mo": 1.0},
-    "condicion": {"causas": ["Sensor envejecido", "Eficiencia del SCR baja (ver SPN 4364)"],
-      "pasos": ["Comprobar el sensor con la prueba del fabricante", "Revisar calidad del AdBlue y dosificación"],
-      "piezas": [{"nombre": "Sensor NOx", "min": 300, "max": 900}], "dificultad": 2, "horas_mo": 1.0}},
-
-  "4364": {"nombre": "Eficiencia de conversión del catalizador SCR", "sistema": "Emisiones · SCR", "critico": false,
-    "electrico": {"piezas": [], "dificultad": 3, "horas_mo": 2},
-    "condicion": {"aviso": "Puede activar reducción de potencia (inducement) si persiste.",
-      "causas": ["AdBlue de mala calidad o diluido", "Inyector dosificador de AdBlue obstruido/cristalizado", "Sensor NOx defectuoso", "Catalizador SCR envejecido"],
-      "pasos": ["Medir calidad del AdBlue con refractómetro (32,5%)", "Prueba de dosificación (caudal) del inyector de AdBlue", "Limpiar cristales de urea del inyector", "Comprobar sensores NOx"],
-      "piezas": [{"nombre": "Inyector dosificador AdBlue", "min": 250, "max": 800}, {"nombre": "Catalizador SCR", "min": 2500, "max": 7000}], "dificultad": 3, "horas_mo": 3}},
-
-  "3364": {"nombre": "Calidad del AdBlue (DEF)", "sistema": "Emisiones · SCR", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de calidad/nivel AdBlue", "min": 250, "max": 900}], "dificultad": 3, "horas_mo": 2},
-    "condicion": {"causas": ["AdBlue contaminado o rellenado con agua", "Depósito sucio"],
-      "pasos": ["Medir concentración con refractómetro", "Vaciar, limpiar depósito y rellenar con AdBlue certificado ISO 22241"],
-      "piezas": [{"nombre": "AdBlue (20 L)", "min": 15, "max": 40}], "dificultad": 2, "horas_mo": 1.5}},
-
-  "1761": {"nombre": "Nivel del depósito de AdBlue (DEF)", "sistema": "Emisiones · SCR", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de calidad/nivel AdBlue", "min": 250, "max": 900}], "dificultad": 3, "horas_mo": 2},
-    "condicion": {"causas": ["Depósito vacío"], "pasos": ["Rellenar AdBlue"],
-      "piezas": [{"nombre": "AdBlue (20 L)", "min": 15, "max": 40}], "dificultad": 1, "horas_mo": 0.2}},
-
-  "5246": {"nombre": "Nivel de penalización (inducement) del SCR", "sistema": "Emisiones · SCR", "critico": true,
-    "electrico": {"piezas": [], "dificultad": 3, "horas_mo": 2},
-    "condicion": {"aviso": "La máquina reduce potencia o limita el régimen hasta resolver la avería de emisiones de origen.",
-      "causas": ["Consecuencia de otra avería de emisiones activa (AdBlue, NOx, dosificación)"],
-      "pasos": ["Resolver primero las demás averías SCR/AdBlue de la lista", "Borrar códigos y confirmar con prueba del fabricante"],
-      "piezas": [], "dificultad": 3, "horas_mo": 2}},
-
-  "1569": {"nombre": "Reducción de par por protección del motor (derate)", "sistema": "Motor · Protección", "critico": false,
-    "electrico": {"piezas": [], "dificultad": 2, "horas_mo": 1},
-    "condicion": {"causas": ["Es una consecuencia: el ECM limita la potencia por otra avería (temperatura, presión, emisiones)"],
-      "pasos": ["Revisar el resto de averías activas: la causa está en ellas"],
-      "piezas": [], "dificultad": 2, "horas_mo": 1}},
-
-  "171": {"nombre": "Temperatura ambiente", "sistema": "Sensores", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de temperatura ambiente", "min": 20, "max": 90}], "dificultad": 1, "horas_mo": 0.5},
-    "condicion": {"causas": ["Sensor expuesto a fuente de calor"], "pasos": ["Revisar ubicación y cableado del sensor"],
-      "piezas": [{"nombre": "Sensor de temperatura ambiente", "min": 20, "max": 90}], "dificultad": 1, "horas_mo": 0.5}},
-
-  "84": {"nombre": "Velocidad de desplazamiento", "sistema": "Transmisión", "critico": false,
-    "electrico": {"piezas": [{"nombre": "Sensor de velocidad de salida de transmisión", "min": 60, "max": 250}], "dificultad": 2, "horas_mo": 1.5},
-    "condicion": {"causas": ["Sensor sucio o entrehierro incorrecto"], "pasos": ["Limpiar sensor y comprobar entrehierro"],
-      "piezas": [{"nombre": "Sensor de velocidad", "min": 60, "max": 250}], "dificultad": 2, "horas_mo": 1.5}}
+  "100": {
+    "nombre": "Presión de aceite motor",
+    "sistema": "Motor · Lubricación",
+    "critico": true,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor/emisor de presión de aceite",
+          "min": 80,
+          "max": 400
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.5
+    },
+    "condicion": {
+      "aviso": "PARAR EL MOTOR. Trabajar con baja presión de aceite destruye cojinetes y cigüeñal.",
+      "causas": [
+        "Nivel de aceite bajo o aceite diluido con gasoil/refrigerante",
+        "Filtro de aceite obstruido",
+        "Viscosidad incorrecta o aceite degradado",
+        "Bomba de aceite o válvula reguladora defectuosa",
+        "Desgaste de cojinetes de bancada/biela"
+      ],
+      "pasos": [
+        "Comprobar nivel y estado del aceite (olor a gasoil, aspecto lechoso)",
+        "Medir presión real con manómetro mecánico y comparar con la lectura del ECM",
+        "Cambiar aceite y filtro con la especificación del fabricante",
+        "Si la presión mecánica también es baja: inspeccionar válvula reguladora y bomba",
+        "Análisis de aceite en laboratorio para detectar metales de cojinetes"
+      ],
+      "piezas": [
+        {
+          "nombre": "Aceite + filtro de aceite",
+          "min": 150,
+          "max": 450
+        },
+        {
+          "nombre": "Bomba de aceite",
+          "min": 600,
+          "max": 2500
+        },
+        {
+          "nombre": "Peor caso: cojinetes de bancada/biela y rectificado",
+          "min": 6000,
+          "max": 16000
+        }
+      ],
+      "dificultad": 4,
+      "horas_mo": 12
+    }
+  },
+  "98": {
+    "nombre": "Nivel de aceite motor",
+    "sistema": "Motor · Lubricación",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de nivel de aceite",
+          "min": 50,
+          "max": 220
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.5
+    },
+    "condicion": {
+      "causas": [
+        "Consumo de aceite",
+        "Fuga externa (retenes, cárter, turbo)",
+        "Nivel no repuesto tras mantenimiento"
+      ],
+      "pasos": [
+        "Comprobar nivel con la varilla en terreno llano",
+        "Buscar fugas externas y manchas bajo la máquina",
+        "Revisar humo azul en escape (consumo por segmentos/turbo)"
+      ],
+      "piezas": [
+        {
+          "nombre": "Aceite motor (rellenado)",
+          "min": 20,
+          "max": 80
+        }
+      ],
+      "dificultad": 1,
+      "horas_mo": 0.5
+    }
+  },
+  "110": {
+    "nombre": "Temperatura del refrigerante motor",
+    "sistema": "Motor · Refrigeración",
+    "critico": true,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de temperatura de refrigerante",
+          "min": 40,
+          "max": 220
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "aviso": "Si la temperatura es alta, dejar el motor al ralentí 3-5 min y parar. No abrir el tapón en caliente.",
+      "causas": [
+        "Radiador obstruido por polvo/paja (muy habitual en obra)",
+        "Nivel de refrigerante bajo o fuga",
+        "Termostato bloqueado",
+        "Correa o bomba de agua defectuosa",
+        "Ventilador hidráulico/viscoso sin funcionar",
+        "Junta de culata (gases en refrigerante)"
+      ],
+      "pasos": [
+        "Limpiar radiador, enfriador de aceite hidráulico e intercooler con aire a presión desde el lado del motor",
+        "Comprobar nivel y fugas en frío",
+        "Comprobar funcionamiento del ventilador a temperatura de trabajo",
+        "Probar termostato en agua caliente",
+        "Prueba de CO2 en el depósito de expansión si se sospecha junta de culata"
+      ],
+      "piezas": [
+        {
+          "nombre": "Termostato + junta",
+          "min": 60,
+          "max": 260
+        },
+        {
+          "nombre": "Bomba de agua",
+          "min": 300,
+          "max": 1200
+        },
+        {
+          "nombre": "Refrigerante (20 L)",
+          "min": 70,
+          "max": 160
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 5
+    }
+  },
+  "111": {
+    "nombre": "Nivel de refrigerante",
+    "sistema": "Motor · Refrigeración",
+    "critico": true,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de nivel de refrigerante",
+          "min": 40,
+          "max": 200
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "Fuga en manguitos, radiador o bomba de agua",
+        "Junta de culata",
+        "Tapón de presión defectuoso"
+      ],
+      "pasos": [
+        "Rellenar y presurizar el circuito con comprobador de presión",
+        "Revisar manguitos, abrazaderas y radiador",
+        "Comprobar tapón de presión"
+      ],
+      "piezas": [
+        {
+          "nombre": "Manguito / abrazaderas",
+          "min": 20,
+          "max": 120
+        },
+        {
+          "nombre": "Tapón de presión",
+          "min": 15,
+          "max": 60
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 2
+    }
+  },
+  "94": {
+    "nombre": "Presión de suministro de combustible (baja presión)",
+    "sistema": "Motor · Combustible",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de presión de combustible",
+          "min": 70,
+          "max": 280
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "Filtros de combustible obstruidos (causa nº1)",
+        "Aire en el circuito / entrada de aire en tubería de aspiración",
+        "Bomba de transferencia/cebado defectuosa",
+        "Depósito casi vacío en pendiente"
+      ],
+      "pasos": [
+        "Cambiar filtro primario (separador de agua) y secundario",
+        "Purgar el circuito con la bomba de cebado",
+        "Revisar racores y tubería de aspiración (burbujas)",
+        "Medir presión de baja con manómetro"
+      ],
+      "piezas": [
+        {
+          "nombre": "Juego filtros de combustible",
+          "min": 50,
+          "max": 220
+        },
+        {
+          "nombre": "Bomba de transferencia eléctrica",
+          "min": 300,
+          "max": 1100
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 2
+    }
+  },
+  "97": {
+    "nombre": "Agua en el combustible",
+    "sistema": "Motor · Combustible",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de agua en separador",
+          "min": 30,
+          "max": 120
+        }
+      ],
+      "dificultad": 1,
+      "horas_mo": 0.5
+    },
+    "condicion": {
+      "aviso": "El agua en el gasoil daña inyectores y bomba de alta presión (common rail). Purgar cuanto antes.",
+      "causas": [
+        "Combustible contaminado",
+        "Condensación en el depósito",
+        "Separador de agua lleno"
+      ],
+      "pasos": [
+        "Purgar el separador de agua",
+        "Cambiar filtro primario",
+        "Si se repite: vaciar y limpiar depósito y revisar el proveedor de gasoil"
+      ],
+      "piezas": [
+        {
+          "nombre": "Filtro separador de agua",
+          "min": 30,
+          "max": 140
+        }
+      ],
+      "dificultad": 1,
+      "horas_mo": 0.5
+    }
+  },
+  "157": {
+    "nombre": "Presión del rail de combustible (common rail)",
+    "sistema": "Motor · Inyección alta presión",
+    "critico": true,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de presión de rail",
+          "min": 150,
+          "max": 600
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 2
+    },
+    "condicion": {
+      "causas": [
+        "Filtros de combustible obstruidos",
+        "Válvula limitadora de presión del rail con fuga",
+        "Inyector con retorno excesivo",
+        "Bomba de alta presión desgastada",
+        "Válvula reguladora de caudal (IMV/MPROP) defectuosa"
+      ],
+      "pasos": [
+        "Cambiar filtros de combustible",
+        "Prueba de retorno de inyectores (caudal de fuga por cilindro)",
+        "Comprobar válvula limitadora del rail",
+        "Comprobar válvula reguladora de caudal de la bomba",
+        "Medir presión de rail en arranque (mínimo según fabricante)"
+      ],
+      "piezas": [
+        {
+          "nombre": "Válvula reguladora de caudal de bomba",
+          "min": 180,
+          "max": 650
+        },
+        {
+          "nombre": "Bomba de alta presión (reconstruida → nueva)",
+          "min": 1500,
+          "max": 5500
+        }
+      ],
+      "dificultad": 4,
+      "horas_mo": 8
+    }
+  },
+  "102": {
+    "nombre": "Presión de sobrealimentación (turbo)",
+    "sistema": "Motor · Admisión",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de presión de admisión (MAP)",
+          "min": 80,
+          "max": 320
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "Fuga en manguitos de intercooler",
+        "Filtro de aire obstruido",
+        "Turbo con holgura o daño",
+        "Actuador del turbo (VGT/wastegate) bloqueado"
+      ],
+      "pasos": [
+        "Revisar filtro de aire y indicador de restricción",
+        "Prueba de estanqueidad del circuito de admisión",
+        "Comprobar holgura axial/radial del eje del turbo",
+        "Comprobar actuador VGT con la herramienta de diagnóstico"
+      ],
+      "piezas": [
+        {
+          "nombre": "Filtro de aire (primario + seguridad)",
+          "min": 80,
+          "max": 300
+        },
+        {
+          "nombre": "Manguito intercooler",
+          "min": 60,
+          "max": 280
+        },
+        {
+          "nombre": "Turbocompresor",
+          "min": 1200,
+          "max": 4500
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 5
+    }
+  },
+  "105": {
+    "nombre": "Temperatura del colector de admisión",
+    "sistema": "Motor · Admisión",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de temperatura de admisión",
+          "min": 40,
+          "max": 160
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 0.8
+    },
+    "condicion": {
+      "causas": [
+        "Intercooler (ATAAC) sucio u obstruido",
+        "Ventilador sin funcionar",
+        "Temperatura ambiente muy alta"
+      ],
+      "pasos": [
+        "Limpiar intercooler por fuera",
+        "Comprobar ventilador",
+        "Comprobar fugas internas del intercooler"
+      ],
+      "piezas": [
+        {
+          "nombre": "Intercooler / ATAAC",
+          "min": 800,
+          "max": 3200
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 6
+    }
+  },
+  "168": {
+    "nombre": "Tensión de batería / alimentación ECU",
+    "sistema": "Eléctrico",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Batería 12V heavy duty (unidad)",
+          "min": 180,
+          "max": 420
+        }
+      ],
+      "dificultad": 1,
+      "horas_mo": 0.5
+    },
+    "condicion": {
+      "causas": [
+        "Baterías descargadas o sulfatadas",
+        "Alternador defectuoso o correa floja",
+        "Bornes oxidados / masa defectuosa",
+        "Consumo parásito con la máquina parada"
+      ],
+      "pasos": [
+        "Medir tensión con motor parado (12,6V por batería) y en marcha (27,5-28,5V en 24V)",
+        "Prueba de carga de baterías",
+        "Limpiar y apretar bornes y masas al chasis y motor",
+        "Comprobar salida del alternador"
+      ],
+      "piezas": [
+        {
+          "nombre": "Batería 12V heavy duty (unidad)",
+          "min": 180,
+          "max": 420
+        },
+        {
+          "nombre": "Alternador 24V",
+          "min": 400,
+          "max": 1500
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 2
+    }
+  },
+  "158": {
+    "nombre": "Tensión de alimentación con llave (ECU)",
+    "sistema": "Eléctrico",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Relé principal / fusible",
+          "min": 10,
+          "max": 60
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "Caída de tensión en el cableado de llave",
+        "Relé principal defectuoso"
+      ],
+      "pasos": [
+        "Medir tensión en el conector de la ECU con llave en ON",
+        "Comprobar relé y fusibles"
+      ],
+      "piezas": [
+        {
+          "nombre": "Relé principal",
+          "min": 10,
+          "max": 60
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    }
+  },
+  "190": {
+    "nombre": "Régimen motor / sensor de velocidad primario",
+    "sistema": "Motor · Sensores de régimen",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de régimen/sincronización (cigüeñal)",
+          "min": 50,
+          "max": 250
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "Sobrerrégimen (bajada en marcha con carga)",
+        "Corona dentada dañada",
+        "Sensor sucio de limaduras"
+      ],
+      "pasos": [
+        "Revisar si hubo sobrerrégimen real (histórico de eventos)",
+        "Desmontar y limpiar sensor; comprobar entrehierro",
+        "Comprobar la rueda fónica"
+      ],
+      "piezas": [
+        {
+          "nombre": "Sensor de régimen",
+          "min": 50,
+          "max": 250
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.5
+    }
+  },
+  "723": {
+    "nombre": "Sensor de velocidad secundario (árbol de levas)",
+    "sistema": "Motor · Sensores de régimen",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de árbol de levas",
+          "min": 50,
+          "max": 250
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "Desincronización entre sensores (distribución)",
+        "Sensor sucio"
+      ],
+      "pasos": [
+        "Limpiar sensor y comprobar entrehierro",
+        "Calibración de sincronización (timing calibration) con herramienta del fabricante"
+      ],
+      "piezas": [
+        {
+          "nombre": "Sensor de árbol de levas",
+          "min": 50,
+          "max": 250
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 2
+    }
+  },
+  "636": {
+    "nombre": "Sensor de posición del motor",
+    "sistema": "Motor · Sensores de régimen",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de posición",
+          "min": 50,
+          "max": 250
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "Señal perdida durante el giro",
+        "Entrehierro incorrecto"
+      ],
+      "pasos": [
+        "Comprobar entrehierro y estado del sensor",
+        "Revisar cableado blindado"
+      ],
+      "piezas": [
+        {
+          "nombre": "Sensor de posición",
+          "min": 50,
+          "max": 250
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.5
+    }
+  },
+  "651": {
+    "nombre": "Inyector cilindro 1",
+    "sistema": "Motor · Inyectores",
+    "critico": false,
+    "familia": "inyector"
+  },
+  "652": {
+    "nombre": "Inyector cilindro 2",
+    "sistema": "Motor · Inyectores",
+    "critico": false,
+    "familia": "inyector"
+  },
+  "653": {
+    "nombre": "Inyector cilindro 3",
+    "sistema": "Motor · Inyectores",
+    "critico": false,
+    "familia": "inyector"
+  },
+  "654": {
+    "nombre": "Inyector cilindro 4",
+    "sistema": "Motor · Inyectores",
+    "critico": false,
+    "familia": "inyector"
+  },
+  "655": {
+    "nombre": "Inyector cilindro 5",
+    "sistema": "Motor · Inyectores",
+    "critico": false,
+    "familia": "inyector"
+  },
+  "656": {
+    "nombre": "Inyector cilindro 6",
+    "sistema": "Motor · Inyectores",
+    "critico": false,
+    "familia": "inyector"
+  },
+  "629": {
+    "nombre": "Centralita (ECU) nº1 - fallo interno",
+    "sistema": "Electrónica",
+    "critico": true,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Revisión alimentación/masas ECU",
+          "min": 0,
+          "max": 50
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 2
+    },
+    "condicion": {
+      "causas": [
+        "Alimentación inestable",
+        "Fallo interno de la ECU",
+        "Software corrupto"
+      ],
+      "pasos": [
+        "Comprobar alimentaciones y masas directamente en el conector de la ECU",
+        "Desconectar baterías 5 min y volver a probar",
+        "Reprogramar con el software del fabricante (Cat ET, Deutz SerDia, etc.)",
+        "Sustituir ECU solo tras descartar todo lo anterior (requiere programación con nº de serie)"
+      ],
+      "piezas": [
+        {
+          "nombre": "ECU motor (nueva/reman., con programación)",
+          "min": 2500,
+          "max": 6000
+        }
+      ],
+      "dificultad": 5,
+      "horas_mo": 5
+    }
+  },
+  "639": {
+    "nombre": "Red J1939 nº1 (comunicación CAN)",
+    "sistema": "Electrónica · Red CAN",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Resistencia terminación CAN / conector",
+          "min": 20,
+          "max": 120
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 3
+    },
+    "condicion": {
+      "causas": [
+        "Resistencias de terminación ausentes o dañadas",
+        "Cable CAN dañado o con humedad",
+        "Una centralita bloqueando el bus"
+      ],
+      "pasos": [
+        "Con baterías desconectadas medir entre CAN-H y CAN-L: ~60Ω correcto, 120Ω falta una terminación, <50Ω cortocircuito o terminación extra",
+        "Desconectar centralitas una a una para localizar la que bloquea el bus",
+        "Revisar conectores con humedad/corrosión"
+      ],
+      "piezas": [
+        {
+          "nombre": "Resistencia terminación CAN",
+          "min": 15,
+          "max": 80
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 3
+    }
+  },
+  "175": {
+    "nombre": "Temperatura de aceite motor",
+    "sistema": "Motor · Lubricación",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor temperatura aceite",
+          "min": 40,
+          "max": 160
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "Enfriador de aceite obstruido",
+        "Sobrecarga prolongada",
+        "Nivel bajo"
+      ],
+      "pasos": [
+        "Comprobar nivel",
+        "Revisar enfriador de aceite y termostato de aceite"
+      ],
+      "piezas": [
+        {
+          "nombre": "Enfriador de aceite motor",
+          "min": 400,
+          "max": 1500
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 5
+    }
+  },
+  "177": {
+    "nombre": "Temperatura de aceite de transmisión",
+    "sistema": "Transmisión",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor temperatura aceite transmisión",
+          "min": 40,
+          "max": 180
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "Patinamiento del convertidor de par por trabajo en marcha corta con carga",
+        "Enfriador de transmisión obstruido",
+        "Nivel incorrecto de aceite"
+      ],
+      "pasos": [
+        "Comprobar nivel con el procedimiento del fabricante (motor en marcha, caliente)",
+        "Limpiar enfriador",
+        "Revisar hábitos de trabajo: evitar empujar con el convertidor en calado"
+      ],
+      "piezas": [
+        {
+          "nombre": "Aceite + filtro transmisión",
+          "min": 200,
+          "max": 700
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 3
+    }
+  },
+  "1638": {
+    "nombre": "Temperatura de aceite hidráulico",
+    "sistema": "Hidráulico",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor temperatura aceite hidráulico",
+          "min": 50,
+          "max": 220
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "aviso": "Aceite hidráulico por encima de ~90 °C degrada juntas y bombas. Reducir carga.",
+      "causas": [
+        "Enfriador hidráulico obstruido (polvo)",
+        "Válvula de alivio abriendo continuamente (trabajo contra tope)",
+        "Bomba con fugas internas",
+        "Nivel bajo de aceite hidráulico",
+        "Ventilador del enfriador sin funcionar"
+      ],
+      "pasos": [
+        "Limpiar enfriador hidráulico",
+        "Comprobar nivel",
+        "Medir presiones de alivio con manómetro",
+        "Prueba de caudal de bomba si persiste"
+      ],
+      "piezas": [
+        {
+          "nombre": "Filtro hidráulico de retorno",
+          "min": 70,
+          "max": 280
+        },
+        {
+          "nombre": "Enfriador hidráulico",
+          "min": 900,
+          "max": 3800
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 6
+    }
+  },
+  "91": {
+    "nombre": "Posición del acelerador / dial de régimen",
+    "sistema": "Mandos",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Potenciómetro/dial de acelerador",
+          "min": 80,
+          "max": 400
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.5
+    },
+    "condicion": {
+      "causas": [
+        "Pedal o dial desgastado"
+      ],
+      "pasos": [
+        "Comprobar señal en todo el recorrido con la herramienta de diagnóstico"
+      ],
+      "piezas": [
+        {
+          "nombre": "Potenciómetro/dial de acelerador",
+          "min": 80,
+          "max": 400
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.5
+    }
+  },
+  "27": {
+    "nombre": "Posición de la válvula EGR",
+    "sistema": "Emisiones · EGR",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Actuador válvula EGR",
+          "min": 400,
+          "max": 1500
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 3
+    },
+    "condicion": {
+      "causas": [
+        "Válvula EGR carbonizada/agarrotada",
+        "Enfriador EGR obstruido"
+      ],
+      "pasos": [
+        "Desmontar y limpiar válvula EGR",
+        "Prueba del actuador con herramienta del fabricante",
+        "Revisar enfriador EGR"
+      ],
+      "piezas": [
+        {
+          "nombre": "Válvula EGR",
+          "min": 500,
+          "max": 1800
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 5
+    }
+  },
+  "641": {
+    "nombre": "Actuador del turbo de geometría variable (VGT)",
+    "sistema": "Motor · Admisión",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Actuador electrónico VGT",
+          "min": 600,
+          "max": 2000
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 3
+    },
+    "condicion": {
+      "causas": [
+        "Álabes del turbo carbonizados",
+        "Actuador defectuoso"
+      ],
+      "pasos": [
+        "Prueba de barrido del actuador",
+        "Limpieza del mecanismo de geometría variable",
+        "Calibrar actuador tras sustituir"
+      ],
+      "piezas": [
+        {
+          "nombre": "Actuador electrónico VGT",
+          "min": 600,
+          "max": 2000
+        },
+        {
+          "nombre": "Turbo VGT completo",
+          "min": 1500,
+          "max": 4500
+        }
+      ],
+      "dificultad": 4,
+      "horas_mo": 6
+    }
+  },
+  "3251": {
+    "nombre": "Presión diferencial del filtro de partículas (DPF)",
+    "sistema": "Emisiones · DPF",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de presión diferencial DPF",
+          "min": 80,
+          "max": 300
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "DPF saturado de hollín (regeneraciones interrumpidas)",
+        "DPF con ceniza (fin de vida, requiere limpieza)",
+        "Tubos del sensor obstruidos o rotos"
+      ],
+      "pasos": [
+        "Revisar tubos del sensor diferencial",
+        "Realizar regeneración estacionaria/forzada",
+        "Si la ceniza es alta: desmontar y limpiar el DPF en máquina de limpieza"
+      ],
+      "piezas": [
+        {
+          "nombre": "Limpieza profesional DPF",
+          "min": 400,
+          "max": 900
+        },
+        {
+          "nombre": "DPF nuevo",
+          "min": 3000,
+          "max": 9000
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 4
+    }
+  },
+  "3719": {
+    "nombre": "Carga de hollín del DPF",
+    "sistema": "Emisiones · DPF",
+    "critico": false,
+    "electrico": {
+      "piezas": [],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "Mucho trabajo a ralentí o baja carga",
+        "Regeneraciones inhibidas por el operador",
+        "Consumo de aceite / inyector goteando (más hollín)"
+      ],
+      "pasos": [
+        "Realizar regeneración estacionaria",
+        "Revisar inyectores y turbo si se satura con frecuencia",
+        "Instruir al operador para no inhibir la regeneración"
+      ],
+      "piezas": [
+        {
+          "nombre": "Limpieza profesional DPF",
+          "min": 400,
+          "max": 900
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 2
+    }
+  },
+  "3216": {
+    "nombre": "Sensor NOx de entrada SCR",
+    "sistema": "Emisiones · SCR",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor NOx",
+          "min": 350,
+          "max": 1300
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "Sensor envejecido",
+        "Fuga de escape antes del sensor"
+      ],
+      "pasos": [
+        "Revisar fugas de escape",
+        "Comprobar el sensor con la prueba del fabricante",
+        "Sustituir sensor"
+      ],
+      "piezas": [
+        {
+          "nombre": "Sensor NOx",
+          "min": 350,
+          "max": 1300
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    }
+  },
+  "3226": {
+    "nombre": "Sensor NOx de salida SCR",
+    "sistema": "Emisiones · SCR",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor NOx",
+          "min": 350,
+          "max": 1300
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    },
+    "condicion": {
+      "causas": [
+        "Sensor envejecido",
+        "Eficiencia del SCR baja (ver SPN 4364)"
+      ],
+      "pasos": [
+        "Comprobar el sensor con la prueba del fabricante",
+        "Revisar calidad del AdBlue y dosificación"
+      ],
+      "piezas": [
+        {
+          "nombre": "Sensor NOx",
+          "min": 350,
+          "max": 1300
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.0
+    }
+  },
+  "4364": {
+    "nombre": "Eficiencia de conversión del catalizador SCR",
+    "sistema": "Emisiones · SCR",
+    "critico": false,
+    "electrico": {
+      "piezas": [],
+      "dificultad": 3,
+      "horas_mo": 2
+    },
+    "condicion": {
+      "aviso": "Puede activar reducción de potencia (inducement) si persiste.",
+      "causas": [
+        "AdBlue de mala calidad o diluido",
+        "Inyector dosificador de AdBlue obstruido/cristalizado",
+        "Sensor NOx defectuoso",
+        "Catalizador SCR envejecido"
+      ],
+      "pasos": [
+        "Medir calidad del AdBlue con refractómetro (32,5%)",
+        "Prueba de dosificación (caudal) del inyector de AdBlue",
+        "Limpiar cristales de urea del inyector",
+        "Comprobar sensores NOx"
+      ],
+      "piezas": [
+        {
+          "nombre": "Inyector dosificador AdBlue",
+          "min": 400,
+          "max": 1400
+        },
+        {
+          "nombre": "Catalizador SCR / módulo de emisiones",
+          "min": 4000,
+          "max": 15000
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 4
+    }
+  },
+  "3364": {
+    "nombre": "Calidad del AdBlue (DEF)",
+    "sistema": "Emisiones · SCR",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de calidad/nivel AdBlue",
+          "min": 300,
+          "max": 1100
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 2
+    },
+    "condicion": {
+      "causas": [
+        "AdBlue contaminado o rellenado con agua",
+        "Depósito sucio"
+      ],
+      "pasos": [
+        "Medir concentración con refractómetro",
+        "Vaciar, limpiar depósito y rellenar con AdBlue certificado ISO 22241"
+      ],
+      "piezas": [
+        {
+          "nombre": "AdBlue (20 L)",
+          "min": 15,
+          "max": 40
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.5
+    }
+  },
+  "1761": {
+    "nombre": "Nivel del depósito de AdBlue (DEF)",
+    "sistema": "Emisiones · SCR",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de calidad/nivel AdBlue",
+          "min": 300,
+          "max": 1100
+        }
+      ],
+      "dificultad": 3,
+      "horas_mo": 2
+    },
+    "condicion": {
+      "causas": [
+        "Depósito vacío"
+      ],
+      "pasos": [
+        "Rellenar AdBlue"
+      ],
+      "piezas": [
+        {
+          "nombre": "AdBlue (20 L)",
+          "min": 15,
+          "max": 40
+        }
+      ],
+      "dificultad": 1,
+      "horas_mo": 0.2
+    }
+  },
+  "5246": {
+    "nombre": "Nivel de penalización (inducement) del SCR",
+    "sistema": "Emisiones · SCR",
+    "critico": true,
+    "electrico": {
+      "piezas": [],
+      "dificultad": 3,
+      "horas_mo": 2
+    },
+    "condicion": {
+      "aviso": "La máquina reduce potencia o limita el régimen hasta resolver la avería de emisiones de origen.",
+      "causas": [
+        "Consecuencia de otra avería de emisiones activa (AdBlue, NOx, dosificación)"
+      ],
+      "pasos": [
+        "Resolver primero las demás averías SCR/AdBlue de la lista",
+        "Borrar códigos y confirmar con prueba del fabricante"
+      ],
+      "piezas": [],
+      "dificultad": 3,
+      "horas_mo": 2
+    }
+  },
+  "1569": {
+    "nombre": "Reducción de par por protección del motor (derate)",
+    "sistema": "Motor · Protección",
+    "critico": false,
+    "electrico": {
+      "piezas": [],
+      "dificultad": 2,
+      "horas_mo": 1
+    },
+    "condicion": {
+      "causas": [
+        "Es una consecuencia: el ECM limita la potencia por otra avería (temperatura, presión, emisiones)"
+      ],
+      "pasos": [
+        "Revisar el resto de averías activas: la causa está en ellas"
+      ],
+      "piezas": [],
+      "dificultad": 2,
+      "horas_mo": 1
+    }
+  },
+  "171": {
+    "nombre": "Temperatura ambiente",
+    "sistema": "Sensores",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de temperatura ambiente",
+          "min": 20,
+          "max": 90
+        }
+      ],
+      "dificultad": 1,
+      "horas_mo": 0.5
+    },
+    "condicion": {
+      "causas": [
+        "Sensor expuesto a fuente de calor"
+      ],
+      "pasos": [
+        "Revisar ubicación y cableado del sensor"
+      ],
+      "piezas": [
+        {
+          "nombre": "Sensor de temperatura ambiente",
+          "min": 20,
+          "max": 90
+        }
+      ],
+      "dificultad": 1,
+      "horas_mo": 0.5
+    }
+  },
+  "84": {
+    "nombre": "Velocidad de desplazamiento",
+    "sistema": "Transmisión",
+    "critico": false,
+    "electrico": {
+      "piezas": [
+        {
+          "nombre": "Sensor de velocidad de salida de transmisión",
+          "min": 60,
+          "max": 250
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.5
+    },
+    "condicion": {
+      "causas": [
+        "Sensor sucio o entrehierro incorrecto"
+      ],
+      "pasos": [
+        "Limpiar sensor y comprobar entrehierro"
+      ],
+      "piezas": [
+        {
+          "nombre": "Sensor de velocidad",
+          "min": 60,
+          "max": 250
+        }
+      ],
+      "dificultad": 2,
+      "horas_mo": 1.5
+    }
+  }
 }

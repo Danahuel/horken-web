@@ -12,11 +12,16 @@ service cloud.firestore {
         ];
     }
 
+    // Fotos y notas del taller (subcolección): leer y añadir, nunca modificar ni borrar
+    match /sessions/{id}/bitacora/{entrada} {
+      allow read, create: if autorizado();
+    }
+
     match /sessions/{id} {
       allow read: if autorizado();
-      // Desde la app solo se pueden cambiar destinatarios, pedir el informe y activar la grabación.
+      // Desde la app solo se pueden cambiar destinatarios, pedir el informe, grabar y registrar reparaciones.
       allow update: if autorizado()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipients', 'report_request', 'record_request']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipients', 'report_request', 'record_request', 'work_orders', 'has_work_orders']);
     }
   }
 }

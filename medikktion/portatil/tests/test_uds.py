@@ -37,3 +37,20 @@ def test_uds_scan_against_simulated_ecu():
     assert codes["B11A4-13"]["active"] and not codes["U0073-88"]["active"]
     assert snap["machine"]["vin"] == "SIMFUCHSMHL350X21"
     assert "UDS" in snap["protocols"]
+
+
+def test_uds_discovery_finds_ecu_outside_default_list():
+    ch = "uds-disc"
+    ecu_bus, tool_bus = can.Bus(interface="virtual", channel=ch), can.Bus(interface="virtual", channel=ch)
+    ecu = simulator.SimulatedUdsEcu(ecu_bus, 0x5A, [(0x011513, 0x09)], {0xF190: "SIMVIN00000000005"})
+    ecu.start()
+    st = collector.MachineState()
+    sess = collector.DiagnosticSession(tool_bus, st)
+    sess.start()
+    try:
+        found = uds.discover(tool_bus, sess.notifier)
+        assert [t.key for t in found] == ["UDS 29b 0x5A"]          # 0x5A no está en la lista típica
+        n = uds.UdsScanner(tool_bus, sess.notifier, timeout=0.3).scan(st, found)
+    finally:
+        sess.stop(); ecu.stop(); ecu_bus.shutdown(); tool_bus.shutdown()
+    assert n == 1 and st.snapshot()["summary"]["active_dtcs"] == 1

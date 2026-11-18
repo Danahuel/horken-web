@@ -15,13 +15,29 @@ import can
 
 from . import collector, j1939, simulator
 from .fisica import Motor
+from .pricing import Pricing
 
 DEMOS = {
-    # escenario: (ubicación, minutos trabajados, en directo, operador)
+    # escenario: (ubicación, minutos trabajados, en directo, motivo)
     "cat320": ("Múnich · Obra Messestadt Riem", 18, True, "Revisión de compra"),
     "fuchs": ("Hamburgo · Terminal de chatarra Waltershof", 22, True, "Mantenimiento preventivo"),
     "arjes": ("Valencia · Planta de reciclaje de madera", 14, False, "Avería en planta"),
     "hamm": ("Stuttgart · Autobahn A8, tramo 4", 25, False, "Control de flota"),
+}
+# País (tarifa), km de desplazamiento, precio que piden y lecturas anteriores de la misma máquina
+EXTRA = {
+    "cat320": {"pais": "DE", "km": 35, "precio": 68000,
+               "historia": [{"date": "2025-04-11", "engine_hours": 9412.0, "active": 2, "health": 71, "location": "Augsburgo"}]},
+    "fuchs": {"pais": "DE", "km": 20, "precio": None,
+              "historia": [{"date": "2025-05-20", "engine_hours": 6410.2, "active": 1, "health": 88, "location": "Hamburgo"},
+                           {"date": "2025-11-03", "engine_hours": 6893.7, "active": 0, "health": 96, "location": "Hamburgo"}],
+              "ordenes": [{"code": "SPN 110 FMI 16", "name": "Temperatura del refrigerante motor", "cost_eur": 640,
+                           "labour_hours": 3.5, "parts": "Termostato + refrigerante", "notes": "Radiador limpiado",
+                           "by": "mecánico", "at": "2025-11-04T09:12:00Z"}]},
+    "arjes": {"pais": "ES", "km": 15, "precio": 210000, "historia": []},
+    "hamm": {"pais": "DE", "km": 60, "precio": None,
+             "historia": [{"date": "2025-03-14", "engine_hours": 2604.5, "active": 0, "health": 98, "location": "Stuttgart"},
+                          {"date": "2025-09-29", "engine_hours": 2880.0, "active": 1, "health": 92, "location": "Ulm"}]},
 }
 TREND_EVERY = 5.0
 
@@ -37,8 +53,12 @@ def _structure(scenario: str, seconds: float = 4.0) -> dict:
         e = simulator.SimulatedUdsEcu(ub, u["addr"], u["dtcs"], u["dids"])
         e.start()
         uds_ecus.append((e, ub))
-    st = collector.MachineState(sc["machine_class"])
+    ex = EXTRA.get(scenario, {})
+    st = collector.MachineState(sc["machine_class"],
+                                labour_rate=Pricing.from_config({"pais": ex.get("pais", "ES")}, sc["machine_class"], ex.get("km", 0)))
     st.plate = dict(sc.get("placa") or {})
+    st.asking_price = ex.get("precio")
+    st.history = list(ex.get("historia", []))
     sess = collector.DiagnosticSession(tbus, st)
     sim.start()
     sess.start()
@@ -91,7 +111,11 @@ def build(scenario: str) -> dict:
         "operator": "Demostración", "location": location, "purpose": purpose,
         "started_at": started.isoformat(), "duration_min": minutes,
         "recipients": [], "updated_at": now.isoformat(),
+        "asking_price": EXTRA.get(scenario, {}).get("precio"),
     })
+    if EXTRA.get(scenario, {}).get("ordenes"):
+        snap["work_orders"] = EXTRA[scenario]["ordenes"]
+        snap["has_work_orders"] = True
     return snap
 
 

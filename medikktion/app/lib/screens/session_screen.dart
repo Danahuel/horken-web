@@ -6,8 +6,10 @@ import '../data/repository.dart';
 import '../data/session.dart';
 import '../theme.dart';
 import '../widgets/instruments.dart';
+import '../widgets/journal.dart';
 import '../widgets/recording.dart';
 import '../widgets/status.dart';
+import '../widgets/work_order.dart';
 
 class SessionScreen extends StatefulWidget {
   final SessionRepository repo;
@@ -85,7 +87,7 @@ class _SessionScreenState extends State<SessionScreen> {
         body: TabBarView(children: [
           SummaryTab(s: s),
           MeasuresTab(s: s),
-          FaultsTab(s: s),
+          FaultsTab(s: s, repo: widget.repo),
           EcusTab(s: s, repo: widget.repo),
           ReportTab(s: s, repo: widget.repo),
         ]),
@@ -151,6 +153,11 @@ class SummaryTab extends StatelessWidget {
           Text('piezas + mano\nde obra', textAlign: TextAlign.right, style: tx(context, 11, color: p.text3)),
         ]),
       ),
+
+      if (s.purchase.isNotEmpty) ...[
+        const SectionLabel('Valoración de compra'),
+        _PurchasePanel(s: s),
+      ],
 
       // Testigos
       const SectionLabel('Testigos del cuadro'),
@@ -245,6 +252,54 @@ class SummaryTab extends StatelessWidget {
               _kv(context, 'Último borrado de averías', 'hace ${fmtNum((s.usage['cleared_min'] as num) / 60, decimals: (s.usage['cleared_min'] as num) < 600 ? 1 : 0)} h de motor'),
             _kv(context, 'Con testigo encendido',
                 s.usage['mil_min'] == null ? '—' : '${fmtNum((s.usage['mil_min'] as num) / 60)} h', last: true),
+          ]),
+        ),
+      ],
+
+      if (((s.maintenance['items'] as List?) ?? []).isNotEmpty) ...[
+        SectionLabel('Mantenimiento por horas',
+            trailing: Text('a ${fmtNum(s.maintenance['hours_basis'], decimals: 0)} h', style: tx(context, 11, color: p.text3))),
+        Panel(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+          child: Column(children: [
+            for (final it in ((s.maintenance['items'] as List).cast<Map>()).take(8))
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 11),
+                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: p.line))),
+                child: Row(children: [
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('${it['name']}', style: tx(context, 13.5)),
+                    const SizedBox(height: 2),
+                    Text('cada ${fmtNum(it['every_h'], decimals: 0)} h · próximo a ${fmtNum(it['next_due_h'], decimals: 0)} h',
+                        style: tx(context, 11.5, color: p.text3)),
+                  ])),
+                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    Text('faltan ${fmtNum(it['remaining_h'], decimals: 0)} h',
+                        style: tx(context, 12.5, w: FontWeight.w500, color: it['soon'] == true ? p.warn : p.text2)),
+                    Text(euros(it['cost_min_eur'], it['cost_max_eur']), style: tx(context, 11.5, color: p.text3)),
+                  ]),
+                ]),
+              ),
+          ]),
+        ),
+      ],
+
+      if (s.history.isNotEmpty) ...[
+        SectionLabel('Historial de esta máquina', trailing: Text('${s.history.length + 1} lecturas', style: tx(context, 11, color: p.text3))),
+        Panel(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            HoursBars(items: [
+              for (final h in s.history) ('${h['date']}${h['location'] != null ? ' · ${'${h['location']}'.split(' · ').first}' : ''}',
+                  (h['engine_hours'] as num).toDouble()),
+              ('Hoy', ((s.tamper['reported_hours'] as num?) ?? 0).toDouble()),
+            ], chronological: true),
+            const SizedBox(height: 4),
+            for (final h in s.history)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text('${h['date']}: ${h['active'] ?? '—'} averías activas · índice ${h['health'] ?? '—'}',
+                    style: tx(context, 12, color: p.text3)),
+              ),
           ]),
         ),
       ],
@@ -444,7 +499,8 @@ class MeasuresTab extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════════════ AVERÍAS
 class FaultsTab extends StatefulWidget {
   final Session s;
-  const FaultsTab({super.key, required this.s});
+  final SessionRepository repo;
+  const FaultsTab({super.key, required this.s, required this.repo});
   @override
   State<FaultsTab> createState() => _FaultsTabState();
 }
@@ -480,7 +536,9 @@ class _FaultsTabState extends State<FaultsTab> {
               style: tx(context, 14, color: p.text2))),
         ])),
       for (final d in list) ...[
-        _FaultCard(d: d, open: _open == _key(d), onTap: () => setState(() => _open = _open == _key(d) ? '' : _key(d))),
+        _FaultCard(d: d, open: _open == _key(d), onTap: () => setState(() => _open = _open == _key(d) ? '' : _key(d)),
+            wo: widget.s.workOrderFor('${d['code']}'),
+            onRegister: () => showWorkOrderSheet(context, widget.repo, widget.s, d)),
         const SizedBox(height: 10),
       ],
     ]);
@@ -514,7 +572,9 @@ class _FaultCard extends StatelessWidget {
   final Map<String, dynamic> d;
   final bool open;
   final VoidCallback onTap;
-  const _FaultCard({required this.d, required this.open, required this.onTap});
+  final Map<String, dynamic>? wo;
+  final VoidCallback onRegister;
+  const _FaultCard({required this.d, required this.open, required this.onTap, this.wo, required this.onRegister});
 
   @override
   Widget build(BuildContext context) {
@@ -546,13 +606,18 @@ class _FaultCard extends StatelessWidget {
                     ]),
                     const SizedBox(height: 10),
                     Text('${d['name']}', style: tx(context, 17, w: FontWeight.w400, h: 1.25)),
+                    if (wo != null) Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text('REPARADA · ${eur(wo!['cost_eur'])}${wo!['labour_hours'] != null ? ' · ${fmtNum(wo!['labour_hours'])} h' : ''}',
+                          style: label(context, size: 9.5, color: p.ok)),
+                    ),
                     const SizedBox(height: 4),
                     Text('${d['fmi_text']}', style: tx(context, 13, color: p.text2)),
                     const SizedBox(height: 10),
                     Text([
                       '${d['source_name']}',
                       if (occ > 0) '$occ ${occ == 1 ? 'ocurrencia' : 'ocurrencias'}',
-                      if (d['active'] != true) 'histórica',
+                      if (d['active'] != true) kindLabels[d['kind']] ?? 'histórica',
                       if (d['protocol'] != null && d['protocol'] != 'J1939') '${d['protocol']}',
                     ].join('  ·  '), style: tx(context, 11.5, color: p.text3)),
                   ]),
@@ -614,6 +679,21 @@ class _FaultCard extends StatelessWidget {
                 ]),
               ),
               const SizedBox(height: 14),
+              if (d['freeze'] is Map && (d['freeze'] as Map).isNotEmpty) ...[
+                Text('CUANDO SALTÓ LA AVERÍA', style: label(context, size: 9.5)),
+                const SizedBox(height: 10),
+                Wrap(spacing: 18, runSpacing: 8, children: [
+                  for (final e in (d['freeze'] as Map).entries)
+                    if (const {'rpm': 'rpm', 'coolant_c': '°C refrig.', 'load_pct': '% carga', 'boost_kpa': 'kPa turbo', 'speed_kmh': 'km/h'}
+                        .containsKey(e.key))
+                      Text.rich(TextSpan(children: [
+                        TextSpan(text: fmtNum(e.value, decimals: 0), style: num_(context, 18)),
+                        TextSpan(text: ' ${const {'rpm': 'rpm', 'coolant_c': '°C refrig.', 'load_pct': '% carga', 'boost_kpa': 'kPa turbo', 'speed_kmh': 'km/h'}[e.key]}',
+                            style: tx(context, 11, color: p.text3)),
+                      ])),
+                ]),
+                const SizedBox(height: 18),
+              ],
               Text('PIEZAS Y PRESUPUESTO', style: label(context, size: 9.5)),
               const SizedBox(height: 8),
               if (parts.isEmpty) Text('No requiere sustitución de piezas.', style: tx(context, 13.5, color: p.text2)),
@@ -628,22 +708,38 @@ class _FaultCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Row(children: [
-                  Expanded(child: Text('Mano de obra · ${fmtNum(d['labour_hours'])} h', style: tx(context, 13, color: p.text2))),
+                  Expanded(child: Text('Mano de obra · ${fmtNum(d['labour_hours'])} h'
+                      '${d['rate'] != null ? ' × ${fmtNum(d['rate'], decimals: 0)} €/h' : ''}', style: tx(context, 13, color: p.text2))),
                 ]),
               ),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(color: p.surface2, borderRadius: BorderRadius.circular(10)),
-                child: Row(children: [
-                  Text('TOTAL ESTIMADO', style: label(context, size: 9.5)),
-                  const Spacer(),
-                  Text(euros(d['cost_min_eur'], d['cost_max_eur']), style: tx(context, 16, w: FontWeight.w500, color: p.gold)),
+                child: Column(children: [
+                  Row(children: [
+                    Text('RECAMBIO ALTERNATIVO', style: label(context, size: 9)),
+                    const Spacer(),
+                    Text(eur(d['cost_min_eur']), style: tx(context, 15, w: FontWeight.w500)),
+                  ]),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Text('RECAMBIO ORIGINAL', style: label(context, size: 9)),
+                    const Spacer(),
+                    Text(eur(d['cost_max_eur']), style: tx(context, 16, w: FontWeight.w500, color: p.gold)),
+                  ]),
+                  if (d['price_source'] != null && d['price_source'] != 'estimación') ...[
+                    const SizedBox(height: 6),
+                    Align(alignment: Alignment.centerRight,
+                        child: Text('según ${d['price_source']}', style: tx(context, 11, color: p.ok))),
+                  ],
                 ]),
               ),
               const SizedBox(height: 18),
               Text('DIFICULTAD DE REPARACIÓN', style: label(context, size: 9.5)),
               const SizedBox(height: 10),
               DifficultyScale((d['difficulty'] as num).toInt()),
+              const SizedBox(height: 18),
+              GoldButton(wo == null ? 'Registrar reparación' : 'Registrar otra reparación', onTap: onRegister, outline: true),
               const SizedBox(height: 16),
               if (d['name_language'] == 'en')
                 Text('Descripción oficial SAE en inglés.', style: tx(context, 11.5, color: p.text3)),
@@ -739,6 +835,7 @@ class _ReportTabState extends State<ReportTab> {
   late List<String> _to = [...widget.s.recipients];
   final _ctrl = TextEditingController();
   bool _sending = false;
+  String _lang = 'es';
 
   void _add() {
     final e = _ctrl.text.trim();
@@ -755,7 +852,7 @@ class _ReportTabState extends State<ReportTab> {
 
   Future<void> _send() async {
     setState(() => _sending = true);
-    await widget.repo.requestReport(widget.s.id, _to);
+    await widget.repo.requestReport(widget.s.id, _to, lang: _lang);
     if (!mounted) return;
     setState(() => _sending = false);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -772,6 +869,8 @@ class _ReportTabState extends State<ReportTab> {
       Text('Documento PDF con el índice de estado, la integridad del horómetro, cada avería con su procedimiento, '
           'piezas y presupuesto, las unidades de control y las mediciones registradas.',
           style: tx(context, 13.5, color: p.text2, h: 1.55)),
+      const SectionLabel('Fotos y notas del taller'),
+      JournalPanel(s: widget.s, repo: widget.repo),
       const SectionLabel('Destinatarios'),
       Panel(
         padding: const EdgeInsets.fromLTRB(18, 8, 8, 8),
@@ -805,7 +904,23 @@ class _ReportTabState extends State<ReportTab> {
           ]),
         ]),
       ),
-      const SizedBox(height: 22),
+      const SizedBox(height: 18),
+      Row(children: [
+        Text('IDIOMA DEL INFORME', style: label(context, size: 9.5)),
+        const Spacer(),
+        for (final l in const [('es', 'Español'), ('de', 'Deutsch')])
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: ChoiceChip(
+              label: Text(l.$2, style: tx(context, 12.5, color: _lang == l.$1 ? const Color(0xFF15120C) : p.text2)),
+              selected: _lang == l.$1, showCheckmark: false,
+              selectedColor: p.gold, backgroundColor: p.surface,
+              side: BorderSide(color: _lang == l.$1 ? p.gold : p.line2),
+              onSelected: (_) => setState(() => _lang = l.$1),
+            ),
+          ),
+      ]),
+      const SizedBox(height: 16),
       GoldButton('Enviar informe', onTap: _to.isEmpty ? null : _send, busy: _sending),
       if (st.isNotEmpty) ...[
         const SizedBox(height: 16),
@@ -822,5 +937,51 @@ class _ReportTabState extends State<ReportTab> {
         ),
       ],
     ]);
+  }
+}
+
+
+class _PurchasePanel extends StatelessWidget {
+  final Session s;
+  const _PurchasePanel({required this.s});
+  @override
+  Widget build(BuildContext context) {
+    final p = context.p;
+    final b = s.purchase;
+    final c = switch (b['verdict']) { 'comprar' => p.ok, 'negociar' => p.warn, _ => p.danger };
+    Widget row(String k, String v, {bool strong = false, bool sub = false}) => Padding(
+          padding: EdgeInsets.only(top: 9, left: sub ? 12 : 0),
+          child: Row(children: [
+            Expanded(child: Text(k, style: tx(context, sub ? 12.5 : 13.5, color: sub ? p.text3 : p.text2))),
+            Text(v, style: tx(context, strong ? 16 : 13.5, w: strong ? FontWeight.w500 : FontWeight.w400,
+                color: strong ? p.gold : p.text)),
+          ]),
+        );
+    return Panel(
+      border: c.withValues(alpha: 0.45),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('${b['label']}', style: tx(context, 16.5, w: FontWeight.w500, color: c, h: 1.3)),
+        const SizedBox(height: 14),
+        Text('COSTE PARA DEJARLA A PUNTO', style: label(context, size: 9)),
+        const SizedBox(height: 6),
+        Text(euros(b['ready_min_eur'], b['ready_max_eur']), style: num_(context, 26)),
+        const SizedBox(height: 6),
+        row('Averías activas y permanentes', euros(b['repairs_min_eur'], b['repairs_max_eur']), sub: true),
+        if ((b['pending_risk_eur'] ?? 0) > 0) row('Averías pendientes (riesgo)', 'hasta ${eur(b['pending_risk_eur'])}', sub: true),
+        row('Servicio de entrada', euros(b['entry_service_min_eur'], b['entry_service_max_eur']), sub: true),
+        if ((b['visit_eur'] ?? 0) > 0) row('Desplazamiento y diagnóstico', eur(b['visit_eur']), sub: true),
+        if ((b['hidden_hours'] ?? 0) > 0)
+          row('Horas ocultas', '${fmtNum(b['hidden_hours'], decimals: 0)} h × ${fmtNum(b['eur_per_hour'])} €/h = ${eur(b['hidden_hours_value_eur'])}'),
+        Divider(color: p.line, height: 22),
+        row('Rebaja recomendada', eur(b['recommended_discount_eur']), strong: true),
+        if (b['asking_price_eur'] != null) ...[
+          row('Precio que piden', eur(b['asking_price_eur'])),
+          row('Oferta máxima', eur(b['max_offer_eur']), strong: true),
+        ],
+        const SizedBox(height: 12),
+        Text('Tarifa ${fmtNum(s.pricing['rate'], decimals: 0)} €/h (${s.pricing['country_name'] ?? ''}) · márgenes de seguridad '
+            'en piezas y horas · redondeado al alza.', style: tx(context, 11.5, color: p.text3, h: 1.5)),
+      ]),
+    );
   }
 }

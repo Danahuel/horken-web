@@ -26,6 +26,12 @@ PGN_ADDRESS_CLAIM = 0xEE00    # 60928  Reclamación de dirección
 PGN_DM1 = 0xFECA              # 65226  Averías activas
 PGN_DM2 = 0xFECB              # 65227  Averías históricas (previamente activas)
 PGN_DM3 = 0xFECC              # 65228  Borrar averías históricas
+PGN_DM4 = 0xFECD              # 65229  Imagen congelada: condiciones cuando saltó cada avería
+PGN_DM6 = 0xFECF              # 65231  Averías pendientes (aún sin confirmar)
+PGN_DM12 = 0xFED4             # 65236  Averías activas de emisiones
+PGN_DM23 = 0xFDB5             # 64949  Averías de emisiones previamente activas
+PGN_DM27 = 0xFD82             # 64898  Todas las averías pendientes
+PGN_DM28 = 0xFD80             # 64896  Averías permanentes (no se borran hasta que se reparan)
 PGN_DM11 = 0xFED3             # 65235  Borrar averías activas
 PGN_EEC1 = 0xF004             # 61444  Régimen motor, par
 PGN_HOURS = 0xFEE5            # 65253  Horas motor, revoluciones totales
@@ -53,7 +59,12 @@ PGN_DM21 = 0xC100             # 49408  Tiempo/distancia con testigo y desde el �
 ON_REQUEST_PGNS = [
     PGN_COMPONENT_ID, PGN_SOFTWARE_ID, PGN_ECU_ID, PGN_HOURS,
     PGN_VD, PGN_VDHR, PGN_LFC, PGN_DM2, PGN_DM19, PGN_VI, PGN_IO, PGN_DM21,
+    PGN_DM6, PGN_DM27, PGN_DM28, PGN_DM12, PGN_DM23, PGN_DM4,
 ]
+
+# Tipo de lista de averías según el mensaje (todas tienen el mismo formato que DM1)
+DM_KIND = {PGN_DM1: "active", PGN_DM12: "emissions", PGN_DM6: "pending", PGN_DM27: "pending",
+           PGN_DM28: "permanent", PGN_DM23: "emissions_prev", PGN_DM2: "history"}
 
 # Direcciones de origen preferentes (SAE J1939 tabla B2). Los fabricantes
 # usan además direcciones propias (128-247) para sus controladores.
@@ -378,3 +389,40 @@ def encode_dm19(cals: list[tuple[str, int]]) -> bytes:
 def decode_vin(payload: bytes) -> str:
     """PGN 65260: VIN en ASCII terminado en '*'."""
     return payload.decode("ascii", errors="replace").split("*")[0].strip("\x00\xff ")
+
+
+def decode_dm4(payload: bytes) -> list[dict]:
+    """DM4: por cada avería, las condiciones del motor en el instante en que saltó."""
+    out, i = [], 0
+    while i < len(payload):
+        n = payload[i]
+        f = payload[i + 1:i + 1 + n]
+        i += 1 + n
+        if n < 4 or len(f) < 4:
+            break
+        spn = f[0] | (f[1] << 8) | ((f[2] >> 5) << 16)
+        fr = {"spn": spn, "fmi": f[2] & 0x1F, "occurrences": f[3] & 0x7F}
+        if len(f) > 5 and f[5] <= 0xFA:
+            fr["boost_kpa"] = f[5] * 2
+        if len(f) > 7 and _u(f, 6, 2) is not None:
+            fr["rpm"] = round(_u(f, 6, 2) * 0.125)
+        if len(f) > 8 and f[8] <= 0xFA:
+            fr["load_pct"] = f[8]
+        if len(f) > 9 and f[9] <= 0xFA:
+            fr["coolant_c"] = f[9] - 40
+        if len(f) > 11 and _u(f, 10, 2) is not None:
+            fr["speed_kmh"] = round(_u(f, 10, 2) / 256, 1)
+        out.append(fr)
+    return out
+
+
+def encode_dm4(frames: list[dict]) -> bytes:
+    out = bytearray()
+    for fr in frames:
+        spn, fmi = fr["spn"], fr["fmi"]
+        body = bytes([spn & 0xFF, (spn >> 8) & 0xFF, ((spn >> 16) & 7) << 5 | fmi, fr.get("occurrences", 1) & 0x7F,
+                      0xFF, int(fr.get("boost_kpa", 0) / 2)]) + int(fr.get("rpm", 0) / 0.125).to_bytes(2, "little") \
+            + bytes([int(fr.get("load_pct", 0)), int(fr.get("coolant_c", 0) + 40)]) \
+            + int(fr.get("speed_kmh", 0) * 256).to_bytes(2, "little")
+        out += bytes([len(body)]) + body
+    return bytes(out)

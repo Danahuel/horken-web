@@ -92,14 +92,17 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
         from .dbc import DbcDecoder
         dbc = DbcDecoder(*args.dbc)
         print(f"DBC cargado: {len(dbc)} mensajes del fabricante")
-    state = collector.MachineState(machine_class=args.clase, labour_rate=cfg.get("labour_rate", 55), dbc=dbc)
+    from .pricing import Pricing
+    pricing = Pricing.from_config(cfg, args.clase, getattr(args, "km_viaje", 0) or 0)
+    state = collector.MachineState(machine_class=args.clase, labour_rate=pricing, dbc=dbc)
     state.plate = plate_from_args(args)
+    state.asking_price = getattr(args, "precio", None)
     sess = collector.DiagnosticSession(bus, state) if bus is not None else None
     session_id = datetime.now().strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:4]
     meta = {"session_id": session_id, "operator": cfg.get("operator", args.operador),
             "location": args.ubicacion, "recipients": cfg.get("default_recipients", []),
             "simulated": sim is not None, "started_at": datetime.now(timezone.utc).isoformat(),
-            "plate": state.plate}
+            "plate": state.plate, "asking_price": state.asking_price}
     resilient = isinstance(sink, ResilientSink)
     n_del, mb = prune_local(args.carpeta, int(cfg.get("retencion_dias", 365)), float(cfg.get("max_mb_local", 1000)))
     n2, mb2 = prune_local(Path(args.carpeta) / "grabaciones", int(cfg.get("retencion_grabaciones_dias", 90)),
@@ -116,9 +119,12 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
           f"{'Firebase (los móviles lo ven ya)' if resilient and sink.online else 'SIN CONEXIÓN: se guarda en el portátil y se subirá al volver' if resilient else sink.folder}")
     pending_reports: list[list[str]] = []
 
-    def send_report(recipients) -> bool:
+    def send_report(recipients, lang: str = "es") -> bool:
         snap = {**meta, **state.snapshot()}
-        pdf = report.build_pdf(snap, Path(args.carpeta) / f"{session_id}.pdf")
+        if hasattr(sink, "journal"):
+            snap["journal"] = sink.journal()
+        lang = lang or cfg.get("idioma_informe", "es")
+        pdf = report.build_pdf(snap, Path(args.carpeta) / f"{session_id}{'-de' if lang == 'de' else ''}.pdf", lang=lang)
         try:
             from .mailer import send_report as mail
             mail(cfg["smtp"], recipients or meta["recipients"], snap, pdf)
@@ -127,7 +133,7 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
             return True
         except Exception as e:  # noqa: BLE001
             if is_network_error(e) or (resilient and not sink.online):
-                pending_reports.append(recipients)  # sin red: se reintenta al volver la conexión
+                pending_reports.append((recipients, lang))  # sin red: se reintenta al volver la conexión
                 print(f"\nInforme en espera (sin conexión): se enviará en cuanto vuelva internet")
             else:
                 sink.report_done(recipients, False, str(e))
@@ -181,6 +187,15 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
     time.sleep(2.0)
     hist, sw = sink.machine_history(state.machine_info().get("serial"))
     state.history, state.previous_software = hist, sw
+    if hist:
+        print(f"Esta máquina ya se leyó {len(hist)} vez/veces: se compara con esas lecturas.")
+    try:
+        costs = sink.real_costs()
+    except Exception:  # noqa: BLE001
+        costs = {}
+    if costs:
+        state.pricing.real_costs = costs
+        print(f"Precios aprendidos de {sum(len(v) for v in costs.values())} reparación(es) real(es).")
     sink.watch_report_requests(send_report, set_recording)
     if hooks is not None:
         hooks.update({
@@ -212,7 +227,7 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
                 last_retry = time.time()
                 for r in list(pending_reports):
                     pending_reports.remove(r)
-                    send_report(r)
+                    send_report(*r)
             if time.time() - last_req > 30:  # refrescar contadores y DM2
                 if sess:
                     sess.request_all()
@@ -236,7 +251,7 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
     pdf = report.build_pdf(snap, Path(args.carpeta) / f"{session_id}.pdf")
     Path(args.carpeta, f"{session_id}.json").write_text(json.dumps(snap, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Informe PDF: {pdf}")
-    for r in pending_reports:
+    for r, _lang in pending_reports:
         print(f"Informe para {', '.join(r)} sin enviar (sin conexión). El PDF está en {pdf}")
     if args.email:
         send_report(args.email)
@@ -263,6 +278,7 @@ def main(argv=None):
     common.add_argument("--dbc", nargs="*", help="archivos DBC del fabricante para decodificar mensajes propios")
     common.add_argument("--sin-uds", action="store_true", help="no buscar centralitas UDS")
     common.add_argument("--grabar", action="store_true", help="grabar todas las tramas CAN (archivo .blf)")
+    common.add_argument("--km-viaje", type=float, default=0, help="km de ida hasta la máquina (desplazamiento)")
     pl = common.add_argument_group("datos de la placa (opcionales, para identificar y comprobar)")
     pl.add_argument("--marca")
     pl.add_argument("--modelo")
@@ -270,6 +286,7 @@ def main(argv=None):
     pl.add_argument("--anio", type=int, help="año de fabricación")
     pl.add_argument("--horas-cuadro", type=float, help="horas que marca el cuadro")
     pl.add_argument("--km-cuadro", type=float, help="km que marca el cuadro")
+    pl.add_argument("--precio", type=float, help="precio que piden por la máquina (informe de compra)")
     d = sub.add_parser("demo", parents=[common], help="probar sin adaptador con una máquina simulada")
     d.add_argument("--escenario", default="cat320", choices=list(simulator.SCENARIOS))
     r = sub.add_parser("leer", parents=[common], help="leer una máquina real")
@@ -285,6 +302,8 @@ def main(argv=None):
     rp.add_argument("archivo")
     rp.add_argument("--velocidad", type=float, default=1.0, help="1 = tiempo real, 5 = cinco veces más rápido")
     sub.add_parser("interfaces", help="adaptadores compatibles")
+    da = sub.add_parser("importar-j1939da", help="importa el diccionario oficial SAE J1939DA (Excel)")
+    da.add_argument("archivo")
     es = sub.add_parser("estacion", help="abre la ventana de la estación de lectura")
     es.add_argument("--puerto-web", type=int, default=8750)
     es.add_argument("--sin-ventana", action="store_true")
@@ -308,6 +327,11 @@ def main(argv=None):
 
     if args.cmd == "interfaces":
         print(INTERFACES)
+        return 0
+    if args.cmd == "importar-j1939da":
+        from .j1939da import import_xlsx
+        n = import_xlsx(args.archivo)
+        print(f"{n} SPN oficiales importados. Ya se usan en todas las lecturas.")
         return 0
     if args.cmd == "estacion":
         from .estacion import serve

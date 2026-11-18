@@ -93,6 +93,8 @@
           <select name="clase" id="f-clase" data-hide="coche demo"></select>
           <label><span class="n">·</span> Lugar</label>
           <input name="ubicacion" placeholder="Ciudad · obra">
+          <label><span class="n">·</span> Km de desplazamiento (solo ida)</label>
+          <input name="km_viaje" inputmode="decimal" placeholder="para sumar viaje y tiempo al presupuesto">
           <details class="plate-box" id="plate-box">
             <summary><span>Datos de la placa</span><em>opcional · mejora la identificación y las comprobaciones</em></summary>
             <div class="row2">
@@ -107,6 +109,8 @@
             </div>
             <label>Km en el cuadro</label>
             <input name="km_cuadro" inputmode="decimal" placeholder="solo vehículos con cuentakilómetros">
+            <label>Precio que piden (€)</label>
+            <input name="precio" inputmode="decimal" placeholder="para calcular la oferta máxima">
           </details>
           <div class="switch" data-hide="coche reproducir">
             <span>Grabar todas las tramas</span>

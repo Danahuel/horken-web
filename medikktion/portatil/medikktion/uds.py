@@ -12,6 +12,7 @@ Solo servicios de LECTURA.
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 
 import can
@@ -118,8 +119,8 @@ def enrich_uds(dtc_id: int, status: int, source_name: str, labour_rate: float = 
         "fault_type": "electrico" if electrical else "condicion",
         "severity": severity, "critical": False, "warning": None,
         "causes": ["Fallo de circuito: cableado, conector o el propio componente"] if electrical else [],
-        "steps": steps, "parts": [], "difficulty": 2 if electrical else 3, "labour_hours": labour,
-        "cost_min_eur": round(labour * labour_rate * 0.7), "cost_max_eur": round(labour * labour_rate * 1.3),
+        "steps": steps, "parts": [], "difficulty": 2 if electrical else 3,
+        **kb.as_pricing(labour_rate).fault([], labour, code),
         "known": known, "proprietary": not known, "brand_note": "",
     }
 
@@ -138,6 +139,41 @@ def default_targets(tester: int = 0xF9) -> list[UdsTarget]:
                     isotp.Address(isotp.AddressingMode.NormalFixed_29bits, source_address=tester, target_address=ta))
           for ta, n in ADDRESS_NAMES_29.items()]
     return t
+
+
+def discover(bus: can.BusABC, notifier: can.Notifier, tester: int = 0xF9, wait: float = 0.8) -> list[UdsTarget]:
+    """Pregunta "¿quién está?" a todas las centralitas a la vez (TesterPresent funcional)
+    en 29 bits (red J1939) y en 11 bits (OBD), y devuelve las que contestan."""
+    found: dict[str, UdsTarget] = {}
+
+    class _L(can.Listener):
+        def on_message_received(self, m: can.Message) -> None:
+            d = bytes(m.data)
+            if len(d) < 2 or d[1] != 0x7E:
+                return
+            if m.is_extended_id and (m.arbitration_id >> 16) & 0xFF == 0xDA and (m.arbitration_id >> 8) & 0xFF == tester:
+                sa = m.arbitration_id & 0xFF
+                name = ADDRESS_NAMES_29.get(sa, f"Centralita 0x{sa:02X}")
+                found.setdefault(f"UDS 29b 0x{sa:02X}", UdsTarget(f"UDS 29b 0x{sa:02X}", name, isotp.Address(
+                    isotp.AddressingMode.NormalFixed_29bits, source_address=tester, target_address=sa)))
+            elif not m.is_extended_id and 0x7E8 <= m.arbitration_id <= 0x7EF:
+                tx = m.arbitration_id - 8
+                found.setdefault(f"UDS 0x{tx:03X}", UdsTarget(f"UDS 0x{tx:03X}", ADDRESS_NAMES_11.get(tx, f"Centralita 0x{tx:03X}"),
+                                                          isotp.Address(isotp.AddressingMode.Normal_11bits, txid=tx, rxid=tx + 8)))
+
+    lst = _L()
+    notifier.add_listener(lst)
+    try:
+        tp = bytes([0x02, 0x3E, 0x00, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC])
+        for arb, ext in ((0x18DB0000 | (0xFF << 8) | tester, True), (0x7DF, False)):
+            try:
+                bus.send(can.Message(arbitration_id=arb, data=tp, is_extended_id=ext))
+            except can.CanError:
+                pass
+        time.sleep(wait)
+    finally:
+        notifier.remove_listener(lst)
+    return list(found.values())
 
 
 class UdsScanner:
@@ -174,10 +210,22 @@ class UdsScanner:
             log.debug("UDS %s: %s", target.key, e)
             return None
 
+    def targets_for(self, state, tester: int = 0xF9) -> list[UdsTarget]:
+        """Direcciones a probar: las que contestan al "¿quién está?", las típicas y las que ya
+        hablan J1939 en el bus (muchas centralitas modernas atienden UDS en su misma dirección)."""
+        out: dict[str, UdsTarget] = {t.key: t for t in discover(self.bus, self.notifier, tester)}
+        for t in default_targets(tester):
+            out.setdefault(t.key, t)
+        for sa in [k for k in list(state.ecus) if isinstance(k, int) and k not in (tester, 0xFE, 0xFF)]:
+            key = f"UDS 29b 0x{sa:02X}"
+            out.setdefault(key, UdsTarget(key, ADDRESS_NAMES_29.get(sa, f"Centralita 0x{sa:02X}"), isotp.Address(
+                isotp.AddressingMode.NormalFixed_29bits, source_address=tester, target_address=sa)))
+        return list(out.values())
+
     def scan(self, state, targets: list[UdsTarget] | None = None) -> int:
         """Escanea y vuelca el resultado en el MachineState. Devuelve nº de centralitas UDS."""
         found = 0
-        for t in targets or default_targets():
+        for t in targets if targets is not None else self.targets_for(state):
             r = self.scan_target(t)
             if not r:
                 continue

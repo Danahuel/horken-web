@@ -1,0 +1,169 @@
+{
+  "_nota": "Intervalos típicos de maquinaria de obra (h de motor). Cada fabricante publica los suyos en el manual de operación y mantenimiento; estos son valores conservadores habituales. Precios de piezas/fluidos en EUR (alternativo → original); 'horas' = mano de obra base.",
+  "items": [
+    {
+      "id": "aceite_motor",
+      "nombre": "Aceite y filtro de motor",
+      "cada": 500,
+      "min": 180,
+      "max": 450,
+      "horas": 1.5,
+      "clases": "todas_menos_coche",
+      "compra": true
+    },
+    {
+      "id": "filtros_combustible",
+      "nombre": "Filtros de combustible (primario y secundario)",
+      "cada": 500,
+      "min": 80,
+      "max": 260,
+      "horas": 1.0,
+      "clases": "todas_menos_coche",
+      "compra": true
+    },
+    {
+      "id": "filtro_aire",
+      "nombre": "Filtro de aire (primario y de seguridad)",
+      "cada": 1000,
+      "min": 90,
+      "max": 320,
+      "horas": 0.5,
+      "clases": "todas_menos_coche",
+      "compra": true
+    },
+    {
+      "id": "filtros_hidraulicos",
+      "nombre": "Filtros hidráulicos (retorno y piloto)",
+      "cada": 1000,
+      "min": 150,
+      "max": 520,
+      "horas": 1.5,
+      "clases": "hidraulicas",
+      "compra": true
+    },
+    {
+      "id": "aceite_hidraulico",
+      "nombre": "Aceite hidráulico completo",
+      "cada": 4000,
+      "min": 900,
+      "max": 2600,
+      "horas": 4.0,
+      "clases": "hidraulicas",
+      "compra": false
+    },
+    {
+      "id": "reductoras",
+      "nombre": "Aceite de reductoras de traslación y giro",
+      "cada": 2000,
+      "min": 150,
+      "max": 480,
+      "horas": 2.0,
+      "clases": "cadenas_giro",
+      "compra": false
+    },
+    {
+      "id": "transmision",
+      "nombre": "Aceite y filtro de transmisión",
+      "cada": 1000,
+      "min": 250,
+      "max": 750,
+      "horas": 2.0,
+      "clases": "ruedas",
+      "compra": false
+    },
+    {
+      "id": "refrigerante",
+      "nombre": "Refrigerante del motor",
+      "cada": 6000,
+      "min": 150,
+      "max": 420,
+      "horas": 2.0,
+      "clases": "todas_menos_coche",
+      "compra": false
+    },
+    {
+      "id": "valvulas",
+      "nombre": "Reglaje de válvulas",
+      "cada": 2000,
+      "min": 20,
+      "max": 120,
+      "horas": 3.0,
+      "clases": "todas_menos_coche",
+      "compra": false
+    },
+    {
+      "id": "correa",
+      "nombre": "Correa de accesorios y tensor",
+      "cada": 3000,
+      "min": 90,
+      "max": 320,
+      "horas": 1.5,
+      "clases": "todas_menos_coche",
+      "compra": false
+    },
+    {
+      "id": "filtro_adblue",
+      "nombre": "Filtro de la bomba de AdBlue",
+      "cada": 4500,
+      "min": 60,
+      "max": 220,
+      "horas": 0.5,
+      "clases": "con_scr",
+      "compra": false
+    },
+    {
+      "id": "dpf",
+      "nombre": "Limpieza de cenizas del filtro de partículas",
+      "cada": 5000,
+      "min": 400,
+      "max": 900,
+      "horas": 3.0,
+      "clases": "con_scr",
+      "compra": false
+    }
+  ],
+  "grupos": {
+    "hidraulicas": [
+      "excavadora_20t",
+      "excavadora_grande",
+      "manipuladora",
+      "cargadora_ruedas",
+      "retro_mixta",
+      "minicargadora",
+      "bulldozer",
+      "trituradora",
+      "rodillo",
+      "generica"
+    ],
+    "cadenas_giro": [
+      "excavadora_20t",
+      "excavadora_grande",
+      "manipuladora",
+      "bulldozer",
+      "generica"
+    ],
+    "ruedas": [
+      "cargadora_ruedas",
+      "dumper_articulado",
+      "retro_mixta",
+      "camion",
+      "rodillo"
+    ]
+  },
+  "depreciacion_eur_h": {
+    "_nota": "Pérdida de valor de mercado por hora de uso en segunda mano (orientativo, ej.: Cat 320 de 4.000 h frente a 10.000 h ≈ 30.000 € de diferencia → ~6 €/h). Sirve para valorar las horas ocultas.",
+    "excavadora_20t": 6,
+    "excavadora_grande": 10,
+    "manipuladora": 9,
+    "cargadora_ruedas": 8,
+    "dumper_articulado": 10,
+    "bulldozer": 12,
+    "rodillo": 4,
+    "trituradora": 15,
+    "retro_mixta": 3.5,
+    "minicargadora": 3,
+    "camion": 4,
+    "coche": 1.5,
+    "generica": 6
+  }
+}

@@ -67,6 +67,29 @@ deja de enviar más de 20 s. Probar el aviso en la demo web: añadir `?corte=1` 
 (Vector BLF, legible con python-can, CANalyzer, BusMaster…). `python -m medikktion reproducir archivo.blf
 [--velocidad 5]` la reproduce como si la máquina estuviera conectada: mismo diagnóstico, comprobado en pruebas.
 
+## Averías: todo lo que lee
+
+J1939: activas (DM1), históricas (DM2), **pendientes** (DM6/DM27), **permanentes** (DM28, delatan borrados),
+emisiones (DM12/DM23) e **imagen congelada** (DM4: rpm, temperatura, carga y turbo cuando saltó).
+UDS: descubrimiento funcional ("¿quién está?") + direcciones típicas + todas las que hablan J1939.
+OBD-II: confirmadas, pendientes, **permanentes (modo 0A)** e **imagen congelada (modo 02)**.
+Diccionario: 98 SPN con procedimiento propio; con el diccionario oficial SAE J1939DA
+(`python -m medikktion importar-j1939da archivo.xlsx`) todas las averías estándar salen con su nombre oficial.
+
+## Precios, mantenimiento y compra
+
+- **Tarifas**: España 75 €/h como mínimo, Alemania 120 €/h; +15 % en piezas, +25 % en horas, más horas en
+  máquinas grandes, desplazamiento (km ida y vuelta + tiempo) y 1 h de diagnóstico. Siempre al alza.
+  Precio con recambio alternativo y con original. Configurable en `config.json` (`pais`, `labour_rate`, `eur_km`).
+- **Precios que aprenden**: en la app, cada avería tiene "Registrar reparación" (coste y horas reales);
+  el portátil usa esos costes reales en las siguientes lecturas.
+- **Mantenimiento por horas**: aceite, filtros, hidráulico, reductoras, transmisión, refrigerante, válvulas,
+  AdBlue, DPF… con próximo vencimiento y coste.
+- **Informe de compra**: coste para dejarla a punto, horas ocultas valoradas (€/h según el tipo de máquina),
+  rebaja recomendada y oferta máxima si se indica el precio que piden.
+- **Historial por máquina**, **fotos y notas** del taller (también en el PDF) e **informe en alemán**
+  (estructura, valoración, averías y FMI en alemán; procedimientos detallados en español).
+
 ## Comprobaciones de horómetro y procedencia
 
 Horas entre centralitas · revoluciones totales (régimen medio de vida) · gasoil total (consumo medio) ·
@@ -97,7 +120,7 @@ python3 -m medikktion demo --escenario cat320 --segundos 20   # Caterpillar con 
 python3 -m medikktion demo --escenario arjes --segundos 20    # Arjes con centralita de otra máquina
 python3 -m medikktion demo --escenario hamm --segundos 20     # Hamm sin manipulación
 python3 -m medikktion demo --escenario fuchs --segundos 20    # Fuchs MHL: J1939 + controlador UDS
-python3 -m pytest -q                                           # 34 pruebas automáticas
+python3 -m pytest -q                                           # 39 pruebas automáticas
 ```
 En Windows usa `py` en lugar de `python3`, o directamente `diagnostico.bat` → opción 3.
 Genera `sesiones/<id>.json` y `sesiones/<id>.pdf`.

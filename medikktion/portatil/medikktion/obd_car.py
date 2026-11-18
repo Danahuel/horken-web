@@ -41,6 +41,28 @@ def _odometer_command():
     return obd.OBDCommand("ODOMETER", "Odómetro", b"01A6", 6, dec, ECU.ENGINE, True)
 
 
+def _custom(name: str, cmd: bytes, decoder):
+    import obd
+    from obd.protocols import ECU
+    return obd.OBDCommand(name, name, cmd, 0, decoder, ECU.ALL, False)
+
+
+def _ff(fn):
+    """Decodificador de modo 02 (imagen congelada): datos = [0x42, PID, nº de imagen, A, B...]."""
+    def dec(messages):
+        d = messages[0].data
+        return fn(d[3:]) if len(d) > 3 else None
+    return dec
+
+
+FREEZE = {  # PID de imagen congelada → (clave, decodificador)
+    "rpm": (b"020C00", _ff(lambda d: (d[0] * 256 + d[1]) / 4 if len(d) > 1 else None)),
+    "coolant_c": (b"020500", _ff(lambda d: d[0] - 40)),
+    "load_pct": (b"020400", _ff(lambda d: round(d[0] * 100 / 255))),
+    "speed_kmh": (b"020D00", _ff(lambda d: d[0])),
+}
+
+
 def _val(r):
     if r is None or r.is_null():
         return None
@@ -70,19 +92,50 @@ def read_car(conn, state, cluster_km: float | None = None, samples: int = 3) -> 
     state.add_ecu(key, "Motor / OBD-II", "OBD-II", vin=(vin or "").strip() or None,
                   component={"make": "", "model": "", "serial": (vin or "").strip(), "unit": ""}, **info)
 
-    dtcs = []
-    for cmd, status in ((obd.commands.GET_DTC, 0x09), (obd.commands.GET_CURRENT_DTC, 0x04)):
-        for code, _desc in (_val(conn.query(cmd)) or []):
+    dtcs, seen = [], {}
+    try:
+        permanent_cmd = _custom("PERMANENT_DTC", b"0A", obd.decoders.dtc)
+    except Exception:  # noqa: BLE001
+        permanent_cmd = None
+    sources = [(obd.commands.GET_DTC, 0x09, "active", "Confirmada (modo 03)"),
+               (obd.commands.GET_CURRENT_DTC, 0x04, "pending", "Pendiente (modo 07)")]
+    if permanent_cmd is not None:
+        sources.append((permanent_cmd, 0x08, "permanent", "Permanente (modo 0A): no se borra hasta repararla"))
+    for cmd, status, kind, txt in sources:
+        try:
+            r = conn.query(cmd, force=True) if cmd is permanent_cmd else conn.query(cmd)
+        except Exception:  # noqa: BLE001
+            continue
+        for code, _desc in (_val(r) or []):
+            if code in seen:
+                seen[code]["kinds"].append(kind)
+                continue
             try:
-                d = enrich_uds(_code_to_id(code), status | (0x80 if status == 0x09 else 0), "Motor / OBD-II",
+                d = enrich_uds(_code_to_id(code), status | (0x80 if kind == "active" else 0), "Motor / OBD-II",
                                state.labour_rate)
             except (ValueError, IndexError):
                 continue
-            d["code"] = code
-            d["fmi_text"] = "Confirmada (modo 03)" if status == 0x09 else "Pendiente (modo 07)"
-            d["protocol"] = "OBD-II"
+            d.update({"code": code, "fmi_text": txt, "protocol": "OBD-II", "kind": kind, "kinds": [kind],
+                      "active": kind == "active"})
+            seen[code] = d
             dtcs.append(d)
+    # Imagen congelada: condiciones cuando saltó la avería que la provocó
+    ff_code = _val(conn.query(obd.commands.FREEZE_DTC)) if conn.supports(obd.commands.FREEZE_DTC) else None
+    if isinstance(ff_code, (list, tuple)) and ff_code and isinstance(ff_code[0], str):
+        ff_code = ff_code[0]
+    if isinstance(ff_code, str) and ff_code in seen:
+        fr = {}
+        for k, (raw, dec) in FREEZE.items():
+            try:
+                v = _val(conn.query(_custom(f"FF_{k}", raw, dec), force=True))
+            except Exception:  # noqa: BLE001
+                v = None
+            if isinstance(v, (int, float)):
+                fr[k] = v
+        if fr:
+            seen[ff_code]["freeze"] = fr
     state.set_dtcs(key, dtcs)
+    perm_only = [c for c, d in seen.items() if d["kinds"] == ["permanent"]]
 
     # Señales de borrado reciente / km
     evidence = []
@@ -111,6 +164,10 @@ def read_car(conn, state, cluster_km: float | None = None, samples: int = 3) -> 
                                  "weight": 60, "level": "alta"})
             else:
                 evidence.append({"title": "Km coherentes cuadro / motor", "detail": f"{odo:,.0f} km.", "weight": 0, "level": "ok"})
+    if perm_only:
+        evidence.append({"title": "Averías permanentes que alguien borró",
+                         "detail": f"{', '.join(perm_only)}: la centralita las guarda como permanentes aunque ya no estén "
+                                   "activas. Se borraron sin reparar.", "weight": 30, "level": "alta"})
     state.extra_evidence = evidence
 
     for _ in range(samples):

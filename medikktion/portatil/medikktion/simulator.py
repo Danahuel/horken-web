@@ -38,9 +38,13 @@ SCENARIOS = {
                    "dm19": [("SIM-CAL-C7.1-A07", 0x5A3C91E2)],
                    "vin": "SIMCAT32000001234", "idle_h": 4444.6, "idle_fuel": 15110, "cleared_min": 95, "mil_min": 610,
                    "dm1": [(651, 5, 3), (100, 18, 2)], "lamps": Lamps(amber_warning=1),
-                   "dm2": [(97, 15, 12), (168, 18, 4), (3719, 16, 7)]},
+                   "dm2": [(97, 15, 12), (168, 18, 4), (3719, 16, 7)],
+                   "dm6": [(102, 18, 1)],
+                   "dm4": [{"spn": 100, "fmi": 18, "occurrences": 2, "rpm": 1650, "coolant_c": 94, "load_pct": 78,
+                            "boost_kpa": 150, "speed_kmh": 0}]},
             0x3D: {"software": ["SIM-ATC-3311-02"], "dm1": [(4364, 18, 5), (3226, 2, 1)],
-                   "lamps": Lamps(mil=1, amber_warning=1), "dm2": [(3364, 18, 2)]},
+                   "lamps": Lamps(mil=1, amber_warning=1), "dm2": [(3364, 18, 2)],
+                   "dm28": [(3364, 18, 0), (3216, 2, 0)]},
             0x17: {"component": "CAT*320*SIM0001234*FLOTA-07*", "software": ["SIM-MON-8812-01"],
                    "hours": 9876.2, "dm1": [], "dm2": []},
             0xE6: {"component": "CAT*320*SIM0001234*FLOTA-07*", "software": ["SIM-MCH-5590-04"],
@@ -60,7 +64,8 @@ SCENARIOS = {
                    "hours": 7340.5, "revs": 7340.5 * 60 * 1450, "fuel": 7340.5 * 19,
                    "dm19": [("SIM-DEUTZ-TCD6.1", 0x1F22A0B7)],
                    "idle_h": 2055.3, "idle_fuel": 8430, "cleared_min": 41000, "mil_min": 0,
-                   "dm1": [(3719, 16, 3)], "lamps": Lamps(amber_warning=1), "dm2": [(110, 16, 2)]},
+                   "dm1": [(3719, 16, 3)], "lamps": Lamps(amber_warning=1), "dm2": [(110, 16, 2)],
+                   "dm6": [(1638, 16, 0)]},
             0x17: {"component": "FUCHS*MHL350*SIM-MHL-03521*GRUA-2*", "software": ["SIM-FUCHS-DSP-7.2"],
                    "hours": 7341.1, "dm1": [], "dm2": []},
         },
@@ -114,6 +119,7 @@ class SimulatedMachine:
         self._stop = threading.Event()
         self._t0 = time.time()
         self.motor = Motor(self.sc["perfil"])
+        self._bam_locks: dict[int, threading.Lock] = {}
         self.values: dict = {}
         self._threads = [threading.Thread(target=self._periodic, daemon=True),
                          threading.Thread(target=self._responder, daemon=True)]
@@ -124,9 +130,11 @@ class SimulatedMachine:
             cid = J1939Id(prio, pgn, sa, dest).to_can_id()
             self.bus.send(can.Message(arbitration_id=cid, data=_pad(data), is_extended_id=True))
         else:
-            for cid, d in j1939.bam_frames(pgn, sa, data):
-                self.bus.send(can.Message(arbitration_id=cid, data=d, is_extended_id=True))
-                time.sleep(0.01)  # J1939: 10-200 ms entre tramas BAM
+            # J1939: una centralita no puede tener dos BAM a la vez; se espera turno
+            with self._bam_locks.setdefault(sa, threading.Lock()):
+                for cid, d in j1939.bam_frames(pgn, sa, data):
+                    self.bus.send(can.Message(arbitration_id=cid, data=d, is_extended_id=True))
+                    time.sleep(0.01)  # 10-200 ms entre tramas BAM
 
     def _dm(self, sa, which):
         e = self.sc["ecus"][sa]
@@ -187,8 +195,13 @@ class SimulatedMachine:
             self._send(pgn, sa, b"\xFF\xFF\xFF\xFF" + _u(e["mil_min"], 2) + _u(e["cleared_min"], 2))
         elif pgn == j1939.PGN_DM19 and e.get("dm19"):
             self._send(pgn, sa, j1939.encode_dm19(e["dm19"]))
-        elif pgn == j1939.PGN_DM2:
-            self._send(pgn, sa, self._dm(sa, "dm2"))
+        elif pgn in (j1939.PGN_DM2, j1939.PGN_DM6, j1939.PGN_DM27, j1939.PGN_DM28, j1939.PGN_DM12, j1939.PGN_DM23):
+            key = {j1939.PGN_DM2: "dm2", j1939.PGN_DM6: "dm6", j1939.PGN_DM27: "dm6", j1939.PGN_DM28: "dm28",
+                   j1939.PGN_DM12: "dm12", j1939.PGN_DM23: "dm23"}[pgn]
+            if e.get(key) or pgn == j1939.PGN_DM2:
+                self._send(pgn, sa, self._dm(sa, key))
+        elif pgn == j1939.PGN_DM4 and e.get("dm4"):
+            self._send(pgn, sa, j1939.encode_dm4(e["dm4"]))
 
     def _responder(self):
         while not self._stop.is_set():
@@ -224,6 +237,16 @@ class SimulatedUdsEcu:
                                                  params={"tx_data_min_length": 8, "blocking_send": False})
         self._stop = threading.Event()
         self._t = threading.Thread(target=self._loop, daemon=True)
+        self.address, self.tester = address, tester
+        ecu = self
+
+        class _Functional(can.Listener):
+            """Contesta al "¿quién está?" funcional (TesterPresent a 0x18DBFF..)."""
+            def on_message_received(self, m):
+                if m.is_extended_id and (m.arbitration_id >> 16) & 0xFF == 0xDB and len(m.data) >= 2 and m.data[1] == 0x3E:
+                    bus.send(can.Message(arbitration_id=0x18DA0000 | (ecu.tester << 8) | ecu.address,
+                                         data=bytes([0x02, 0x7E, 0x00, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC]), is_extended_id=True))
+        self.notifier.add_listener(_Functional())
 
     def _answer(self, req: bytes) -> bytes:
         sid = req[0]

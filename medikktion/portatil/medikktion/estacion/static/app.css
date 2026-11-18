@@ -248,3 +248,12 @@ input::placeholder { color: #4d4a45; }
 .evid-row i { width: 8px; height: 8px; margin-top: 6px; }
 .evid-row b { font-weight: 500; font-size: 13.5px; }
 .evid-row p { margin: 2px 0 0; color: var(--text3); font-size: 12.5px; }
+
+/* ── valoración de compra ───────────────────────────── */
+.buy { display: grid; grid-template-columns: 1.6fr repeat(4, 1fr); border-bottom: 1px solid var(--line); align-items: center; }
+.buy:empty { display: none; }
+.buy > div { padding: 12px 0 12px 16px; border-right: 1px solid var(--line); }
+.buy > div:last-child { border-right: 0; }
+.buy .buy-v { padding-left: 0; font-weight: 500; font-size: 14px; line-height: 1.35; }
+.buy span { display: block; font-size: 10px; letter-spacing: .16em; color: var(--text3); font-weight: 600; margin-bottom: 4px; }
+.buy b { font-weight: 400; font-size: 15px; }
