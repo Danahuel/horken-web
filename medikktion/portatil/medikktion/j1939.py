@@ -46,10 +46,13 @@ PGN_COMPONENT_ID = 0xFEEB     # 65259  Marca*Modelo*Nº serie*Unidad
 PGN_SOFTWARE_ID = 0xFEDA      # 65242  Versión de software
 PGN_ECU_ID = 0xFDC5           # 64965  Identificación de centralita
 PGN_DM19 = 0xD300             # 54016  Calibraciones (Cal ID + CVN): huella del software
+PGN_VI = 0xFEEC               # 65260  Número de bastidor (VIN, SPN 237)
+PGN_IO = 0xFEDC               # 65244  Ralentí: combustible (SPN 236) y horas (SPN 235) totales
+PGN_DM21 = 0xC100             # 49408  Tiempo/distancia con testigo y desde el último borrado de averías
 
 ON_REQUEST_PGNS = [
     PGN_COMPONENT_ID, PGN_SOFTWARE_ID, PGN_ECU_ID, PGN_HOURS,
-    PGN_VD, PGN_VDHR, PGN_LFC, PGN_DM2, PGN_DM19,
+    PGN_VD, PGN_VDHR, PGN_LFC, PGN_DM2, PGN_DM19, PGN_VI, PGN_IO, PGN_DM21,
 ]
 
 # Direcciones de origen preferentes (SAE J1939 tabla B2). Los fabricantes
@@ -307,6 +310,16 @@ PGN_DECODERS: dict[int, list[tuple[str, str, str, Callable[[bytes], Optional[flo
     PGN_HYD: [
         ("hyd_oil_temp_c", "Temperatura aceite hidráulico", "°C", lambda d: _scaled(d, 0, 1, 1, -40)),
     ],
+    PGN_IO: [
+        ("idle_fuel_l", "Combustible total al ralentí", "L", lambda d: _scaled(d, 0, 4, 0.5)),
+        ("idle_hours", "Horas totales al ralentí", "h", lambda d: _scaled(d, 4, 4, 0.05)),
+    ],
+    PGN_DM21: [
+        ("mil_km", "Distancia con testigo de avería", "km", lambda d: _scaled(d, 0, 2, 1)),
+        ("cleared_km", "Distancia desde el borrado de averías", "km", lambda d: _scaled(d, 2, 2, 1)),
+        ("mil_min", "Minutos de motor con testigo de avería", "min", lambda d: _scaled(d, 4, 2, 1)),
+        ("cleared_min", "Minutos de motor desde el borrado de averías", "min", lambda d: _scaled(d, 6, 2, 1)),
+    ],
     PGN_AT1T1: [
         ("def_level_pct", "Nivel AdBlue (DEF)", "%", lambda d: _scaled(d, 0, 1, 0.4)),
     ],
@@ -360,3 +373,8 @@ def decode_dm19(payload: bytes) -> list[dict]:
 
 def encode_dm19(cals: list[tuple[str, int]]) -> bytes:
     return b"".join(cvn.to_bytes(4, "little") + cal.encode()[:16].ljust(16, b"\x00") for cal, cvn in cals)
+
+
+def decode_vin(payload: bytes) -> str:
+    """PGN 65260: VIN en ASCII terminado en '*'."""
+    return payload.decode("ascii", errors="replace").split("*")[0].strip("\x00\xff ")

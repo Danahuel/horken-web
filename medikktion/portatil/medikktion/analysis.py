@@ -162,9 +162,9 @@ def fingerprint(ecu: dict) -> list[str]:
     return list(ecu.get("software") or []) + [f"CAL {c['cal_id']} CVN {c['cvn']}" for c in ecu.get("calibrations") or []]
 
 
-def analyze_modifications(ecus: dict, previous_software: dict | None = None) -> dict:
+def analyze_modifications(ecus: dict, previous_software: dict | None = None, extra: list[dict] | None = None) -> dict:
     """Busca centralitas cambiadas o software modificado."""
-    findings = []
+    findings = list(extra or [])
     serials = {sa: e["component"]["serial"] for sa, e in ecus.items()
                if e.get("component") and e["component"].get("serial")}
     if len(set(serials.values())) > 1:
@@ -207,3 +207,115 @@ def health_index(active_dtcs: list[dict], tamper: dict, mods: dict) -> dict:
     label = ("Óptimo" if score >= 85 else "Aceptable" if score >= 65
              else "Requiere atención" if score >= 40 else "Crítico")
     return {"score": score, "label": label}
+
+
+def _norm(s) -> str:
+    return "".join(ch for ch in str(s or "").upper() if ch.isalnum())
+
+
+def _ref_ecu(ecus: dict):
+    hours = {sa: e["engine_hours"] for sa, e in ecus.items() if e.get("engine_hours") is not None}
+    sa = 0 if 0 in hours else (sorted(hours, key=str)[0] if hours else None)
+    return sa, (ecus.get(sa, {}) if sa is not None else {})
+
+
+def cross_checks(ecus: dict, plate: dict | None, year_now: int | None = None) -> tuple[dict, list[dict], list[dict]]:
+    """Cruza lo que dicen las centralitas con la placa y con contadores de uso.
+
+    Devuelve (uso, pruebas para el horómetro, hallazgos de modificación)."""
+    from datetime import date
+    plate = plate or {}
+    year_now = year_now or date.today().year
+    ev, mods = [], []
+    sa, eng = _ref_ecu(ecus)
+    hours = eng.get("engine_hours")
+
+    def first(key):
+        if eng.get(key) is not None:
+            return eng[key]
+        return next((e[key] for e in ecus.values() if e.get(key) is not None), None)
+
+    usage = {"engine_hours": hours, "idle_hours": first("idle_hours"), "idle_fuel_l": first("idle_fuel_l"),
+             "total_fuel_l": first("total_fuel_l"), "cleared_min": first("cleared_min"), "mil_min": first("mil_min"),
+             "cleared_km": first("cleared_km")}
+    if hours and usage["total_fuel_l"]:
+        usage["fuel_per_hour"] = round(usage["total_fuel_l"] / hours, 2)
+    if hours and first("total_revolutions"):
+        usage["avg_rpm"] = round(first("total_revolutions") / (hours * 60))
+
+    # Ralentí
+    idle = usage["idle_hours"]
+    if hours and idle is not None:
+        usage["idle_pct"] = round(idle / hours * 100, 1)
+        if idle > hours + 1:
+            ev.append(_ev("Horas al ralentí mayores que las horas totales",
+                          f"La centralita registra {_n(idle, 1)} h al ralentí pero solo {_n(hours, 1)} h en total. "
+                          "Es imposible: el horómetro total se ha rebajado y el contador de ralentí no.", 50, "alta"))
+        else:
+            ev.append(_ev("Horas al ralentí coherentes",
+                          f"{_n(idle, 0)} h al ralentí ({_n(usage['idle_pct'], 0)} % de su vida).", 0, "ok"))
+
+    # Borrado de averías (DM21)
+    cm = usage["cleared_min"]
+    if cm is not None:
+        h = cm / 60
+        if h < 10:
+            ev.append(_ev("Averías borradas hace muy poco",
+                          f"El último borrado de códigos fue hace {_n(h, 1)} h de motor. Antes de una compra es una señal "
+                          "de alerta: trabaje la máquina un rato y vuelva a leer.", 20, "media"))
+        else:
+            ev.append(_ev("Sin borrado reciente de averías", f"Último borrado hace {_n(h, 0)} h de motor.", 0, "ok"))
+    if usage["mil_min"]:
+        ev.append(_ev("Testigo de avería encendido en su historial",
+                      f"Ha trabajado {_n(usage['mil_min'] / 60, 1)} h con el testigo de avería encendido.", 0, "media"))
+
+    # Placa: horas del cuadro
+    ph = plate.get("hours")
+    if ph is not None and hours:
+        diff = abs(ph - hours)
+        if diff > max(20, hours * 0.02):
+            ev.append(_ev("Las horas del cuadro no coinciden con la centralita",
+                          f"Cuadro: {_n(ph, 0)} h · centralita de motor: {_n(hours, 1)} h (diferencia {_n(diff, 0)} h).",
+                          55, "alta"))
+        else:
+            ev.append(_ev("Horas del cuadro coherentes con la centralita",
+                          f"Cuadro {_n(ph, 0)} h · centralita {_n(hours, 1)} h.", 0, "ok"))
+    # Placa: km del cuadro
+    pk = plate.get("km")
+    km = next((e.get("total_km") for e in ecus.values() if e.get("total_km") is not None), None)
+    if pk is not None and km:
+        if abs(pk - km) > max(50, km * 0.01):
+            ev.append(_ev("Los km del cuadro no coinciden con la centralita",
+                          f"Cuadro: {_n(pk, 0)} km · centralita: {_n(km, 0)} km.", 55, "alta"))
+        else:
+            ev.append(_ev("Km del cuadro coherentes", f"{_n(km, 0)} km.", 0, "ok"))
+    # Año de fabricación: horas por año
+    yr = plate.get("year")
+    if yr and hours:
+        age = max(0.5, year_now - int(yr) + 0.5)
+        hpy = hours / age
+        usage["hours_per_year"] = round(hpy)
+        if hpy > 6000:
+            ev.append(_ev("Horas por año imposibles", f"{_n(hpy, 0)} h/año desde {yr}.", 30, "alta"))
+        elif hpy < 150 and age >= 3:
+            ev.append(_ev("Muy pocas horas para su antigüedad",
+                          f"{_n(hours, 0)} h en unos {_n(age, 0)} años = {_n(hpy, 0)} h/año. Lo habitual en obra es "
+                          "500-2.000 h/año. Puede haber estado parada… o tener el horómetro rebajado.", 15, "media"))
+        else:
+            ev.append(_ev("Uso anual normal", f"{_n(hpy, 0)} h/año desde {yr}.", 0, "ok"))
+
+    # Placa: número de serie frente a centralitas
+    ps = _norm(plate.get("serial"))
+    if len(ps) >= 4:
+        # El VIN (17 caracteres) y el nº de serie de máquina son números distintos: solo se compara
+        # el VIN si lo que se escribió en la placa es un VIN.
+        ids = [(e.get("name", str(k)), str(v)) for k, e in ecus.items()
+               for v in ((e.get("component") or {}).get("serial"), e.get("vin") if len(ps) == 17 else None)
+               if v and len(_norm(v)) >= 4]
+        if ids:
+            bad = [(n, v) for n, v in ids if ps not in _norm(v) and _norm(v) not in ps]
+            if bad:
+                mods.append({"title": "El nº de serie de la placa no coincide con la centralita", "level": "alta",
+                             "detail": f"Placa: {plate.get('serial')} · " + ", ".join(f"{n}: {v}" for n, v in bad)
+                             + ". La centralita puede proceder de otra máquina."})
+    return usage, ev, mods

@@ -175,7 +175,9 @@ class Controller:
             carpeta=str(self.folder / "sesiones"), operador="", ubicacion=p.get("ubicacion", ""),
             email=None, local=False, dbc=None, sin_uds=bool(p.get("sin_uds")), grabar=bool(p.get("grabar")),
             dispositivo=int(p.get("dispositivo") or 1), protocolo=p.get("protocolo") or "CAN",
-            bitrate=int(p.get("bitrate") or 0), j1587=True, km_cuadro=p.get("km") or None,
+            bitrate=int(p.get("bitrate") or 0), j1587=True,
+            marca=p.get("marca") or None, modelo=p.get("modelo") or None, serie_placa=p.get("serie_placa") or None,
+            anio=p.get("anio") or None, horas_cuadro=p.get("horas_cuadro") or None, km_cuadro=p.get("km_cuadro") or None,
             escenario=p.get("escenario") or "cat320", velocidad=float(p.get("velocidad") or 1),
         )
         self.mode, self.started = mode, time.time()
@@ -193,6 +195,7 @@ class Controller:
                     sc = simulator.SCENARIOS[args.escenario]
                     if args.clase == "generica":
                         args.clase = sc["machine_class"]
+                    cli.apply_demo_plate(args, sc)
                     print(f"SIMULADOR: {sc['descripcion']}")
                     mb, tb = can.Bus(interface="virtual", channel="est"), can.Bus(interface="virtual", channel="est")
                     buses += [mb, tb]
@@ -302,7 +305,9 @@ def _slim(snap: dict | None) -> dict | None:
     return {
         "session_id": snap.get("session_id"), "machine": snap.get("machine", {}),
         "summary": snap.get("summary", {}), "health": snap.get("health", {}),
-        "tamper": {k: snap.get("tamper", {}).get(k) for k in ("verdict", "label", "score", "reported_hours", "estimated_real_hours")},
+        "tamper": {k: snap.get("tamper", {}).get(k) for k in ("verdict", "label", "score", "reported_hours",
+                                                            "estimated_real_hours", "evidence")},
+        "mods": snap.get("modifications", {}).get("findings", []), "usage": snap.get("usage", {}),
         "lamps": snap.get("lamps", {}), "protocols": snap.get("protocols", []),
         "live": snap.get("live", {}), "recording": snap.get("recording"),
         "dtcs": [{k: d.get(k) for k in ("code", "name", "fmi_text", "severity", "active", "source_name", "cost_min_eur",

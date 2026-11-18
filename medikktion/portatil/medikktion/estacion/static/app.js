@@ -93,7 +93,10 @@ function formData() {
     modo: mode,
     lector: f.lector.value, dispositivo: opt ? opt.dataset.dev : 1,
     protocolo: segValue("protocolo"), sin_uds: segValue("uds") === "0",
-    puerto: f.puerto.value.trim(), km: parseFloat(f.km.value) || null,
+    puerto: f.puerto.value.trim(),
+    marca: f.marca.value.trim(), modelo: f.modelo.value.trim(), serie_placa: f.serie_placa.value.trim(),
+    anio: parseInt(f.anio.value) || null, horas_cuadro: parseFloat(f.horas_cuadro.value.replace(",", ".")) || null,
+    km_cuadro: parseFloat(f.km_cuadro.value.replace(",", ".")) || null,
     escenario: f.escenario.value, archivo: f.archivo.value, velocidad: segValue("velocidad"),
     clase: f.clase.value, ubicacion: f.ubicacion.value.trim(),
     grabar: $("#f-grabar").getAttribute("aria-pressed") === "true",
@@ -275,6 +278,18 @@ function renderReading(s) {
     target[k] = p.value * M[2];
   }
 
+  const u = s.usage || {};
+  const idBy = m.identified_by === "placa" ? "por la placa" : m.identified_by === "centralita" ? "por la centralita" : "sin identificar";
+  $("#usage").innerHTML = `
+    <div><span>VIN</span><b>${esc(m.vin || "—")}</b></div>
+    <div><span>IDENTIFICADA</span><b>${idBy}</b></div>
+    <div><span>RALENTÍ</span><b>${u.idle_pct != null ? num(u.idle_pct, 0) + " % de su vida" : "—"}</b></div>
+    <div><span>CONSUMO MEDIO</span><b>${u.fuel_per_hour != null ? num(u.fuel_per_hour, 1) + " L/h" : "—"}${u.hours_per_year ? " · " + num(u.hours_per_year, 0) + " h/año" : ""}</b></div>
+    <div><span>ÚLTIMO BORRADO</span><b>${u.cleared_min != null ? "hace " + num(u.cleared_min / 60, u.cleared_min < 600 ? 1 : 0) + " h" : "—"}</b></div>`;
+  $("#evid").innerHTML = [...(s.tamper.evidence || []), ...(s.mods || [])].map((e) => `
+    <div class="evid-row"><i style="background:${e.level === "ok" ? "var(--green)" : e.level === "alta" ? "var(--red)" : "var(--amber)"}"></i>
+      <div><b>${esc(e.title)}</b><p>${esc(e.detail)}</p></div></div>`).join("");
+
   const faults = s.dtcs;
   $("#faults").innerHTML = faults.length ? faults.map((d) => `
     <div class="fault ${d.active ? "" : "hist"}">
@@ -307,10 +322,12 @@ function readingSkeleton() {
       <div class="index"><div class="k">ÍNDICE DE ESTADO</div><div class="v" id="m-index">—</div><div class="l" id="m-index-l"></div></div>
     </div>
     <div class="counters" id="counters"></div>
+    <div class="usage" id="usage"></div>
     <div class="cols">
       <div><div class="sec-title">VALORES EN VIVO</div><div id="live"></div>
         <div class="sec-title" style="margin-top:22px">CENTRALITAS</div><div id="ecus"></div></div>
-      <div><div class="sec-title">AVERÍAS</div><div id="faults"></div></div>
+      <div><div class="sec-title">AVERÍAS</div><div id="faults"></div>
+        <div class="sec-title evid">HORÓMETRO Y PROCEDENCIA</div><div id="evid"></div></div>
     </div>
     <div class="actions">
       <div class="act-rec"><div><div class="t">Grabación de tramas</div><div class="d" id="rec-d"></div></div>

@@ -97,3 +97,27 @@ def test_end_to_end_simulator(scenario, verdict, mods):
     assert snap["tamper"]["verdict"] == verdict
     assert snap["modifications"]["level"] == mods
     assert snap["live"]["rpm"]["value"] > 500
+
+
+def test_plate_and_usage_cross_checks():
+    ecus = {0: {"name": "Motor", "engine_hours": 2000.0, "idle_hours": 2300.0, "cleared_min": 30,
+                "component": {"serial": "ABC12345"}, "vin": "WVWZZZ1KZ6W000001"}}
+    usage, ev, mods = analysis.cross_checks(ecus, {"serial": "ABC12345", "hours": 6100, "year": 2012}, year_now=2026)
+    titles = {e["title"] for e in ev}
+    assert "Horas al ralentí mayores que las horas totales" in titles
+    assert "Averías borradas hace muy poco" in titles
+    assert "Las horas del cuadro no coinciden con la centralita" in titles
+    assert "Muy pocas horas para su antigüedad" in titles
+    assert mods == []                                   # mismo nº de serie; el VIN no se compara
+    _, _, mods = analysis.cross_checks(ecus, {"serial": "XYZ99999"})
+    assert mods and "no coincide" in mods[0]["title"]
+    assert usage["idle_pct"] == 115.0 and usage["hours_per_year"] == 138
+
+
+def test_new_j1939_pgns():
+    from medikktion import j1939 as J
+    assert J.decode_vin(b"SIMCAT32000001234*") == "SIMCAT32000001234"
+    io = J.decode_params(J.PGN_IO, (int(1000 / 0.5)).to_bytes(4, "little") + (int(250 / 0.05)).to_bytes(4, "little"))
+    assert io == {"idle_fuel_l": 1000.0, "idle_hours": 250.0}
+    dm21 = J.decode_params(J.PGN_DM21, b"\xff\xff\xff\xff" + (90).to_bytes(2, "little") + (600).to_bytes(2, "little"))
+    assert dm21 == {"mil_min": 90.0, "cleared_min": 600.0}

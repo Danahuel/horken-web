@@ -224,3 +224,27 @@ input::placeholder { color: #4d4a45; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: #262626; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ── datos de la placa ──────────────────────────────── */
+.plate-box { margin-top: 16px; border: 1px solid var(--line); padding: 0 12px; }
+.plate-box summary { cursor: pointer; list-style: none; padding: 11px 0; display: flex; flex-direction: column; gap: 2px; }
+.plate-box summary::-webkit-details-marker { display: none; }
+.plate-box summary span { font-size: 13px; color: var(--text); }
+.plate-box summary span::before { content: "+"; font-family: Plex, monospace; color: var(--yellow); margin-right: 8px; }
+.plate-box[open] summary span::before { content: "−"; }
+.plate-box summary em { font-style: normal; color: var(--text3); font-size: 11px; }
+.plate-box[open] { padding-bottom: 12px; }
+.plate-box label { margin-top: 10px; }
+
+/* ── ficha de uso ───────────────────────────────────── */
+.usage { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid var(--line); }
+.usage div { padding: 11px 0 11px 16px; border-right: 1px solid var(--line); }
+.usage div:first-child { padding-left: 0; }
+.usage div:last-child { border-right: 0; }
+.usage span { display: block; font-size: 10px; letter-spacing: .16em; color: var(--text3); font-weight: 600; margin-bottom: 4px; }
+.usage b { font-weight: 400; font-size: 14px; font-family: Plex, monospace; }
+.evid { margin-top: 22px; }
+.evid-row { display: grid; grid-template-columns: 14px 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.evid-row i { width: 8px; height: 8px; margin-top: 6px; }
+.evid-row b { font-weight: 500; font-size: 13.5px; }
+.evid-row p { margin: 2px 0 0; color: var(--text3); font-size: 12.5px; }

@@ -199,6 +199,33 @@ def build_pdf(snapshot: dict, path: str | Path) -> Path:
         mark = "<font color='#23855D'>✓</font>" if e["level"] == "ok" else "<font color='#C63A31'>!</font>"
         el.append(Paragraph(f"{mark}&nbsp;&nbsp;<font name='{F_MED}'>{e['title']}</font> — {e['detail']}", S_BODY))
         el.append(Spacer(1, 3))
+    u = snapshot.get("usage") or {}
+    pl = (snapshot.get("machine") or {}).get("plate") or {}
+    rows = []
+    if u.get("idle_pct") is not None:
+        rows.append(("Al ralentí", f"{_n(u['idle_pct'], 0)} % de su vida ({_n(u.get('idle_hours'), 0)} h, "
+                                   f"{_n(u.get('idle_fuel_l'), 0)} L)"))
+    if u.get("fuel_per_hour") is not None:
+        rows.append(("Consumo medio de vida", f"{_n(u['fuel_per_hour'], 1)} L/h"))
+    if u.get("avg_rpm") is not None:
+        rows.append(("Régimen medio de vida", f"{_n(u['avg_rpm'], 0)} rpm"))
+    if u.get("hours_per_year") is not None:
+        rows.append(("Uso anual", f"{_n(u['hours_per_year'], 0)} h/año"))
+    if u.get("cleared_min") is not None:
+        rows.append(("Último borrado de averías", f"hace {_n(u['cleared_min'] / 60, 1)} h de motor"))
+    if u.get("mil_min"):
+        rows.append(("Con testigo de avería encendido", f"{_n(u['mil_min'] / 60, 1)} h"))
+    if m.get("vin"):
+        rows.append(("VIN", m["vin"]))
+    for k, lbl in (("serial", "Placa · nº de serie"), ("year", "Placa · año"), ("hours", "Cuadro · horas"), ("km", "Cuadro · km")):
+        if pl.get(k) is not None:
+            rows.append((lbl, _n(pl[k], 0) if isinstance(pl[k], (int, float)) and k != "year" else str(pl[k])))
+    if rows:
+        el.append(_section("Uso y procedencia"))
+        ut = Table([[Paragraph(k, S_SMALL), Paragraph(v, S_BODY)] for k, v in rows], colWidths=[60 * mm, 116 * mm])
+        ut.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]))
+        el.append(ut)
     mods = snapshot.get("modifications", {})
     if mods.get("findings"):
         el.append(_section("Modificaciones detectadas"))

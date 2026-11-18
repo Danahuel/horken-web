@@ -13,7 +13,8 @@ from . import analysis, j1939, kb
 
 log = logging.getLogger("medikktion.collector")
 
-COUNTER_KEYS = ("engine_hours", "total_revolutions", "total_fuel_l", "total_km", "total_km_hr")
+COUNTER_KEYS = ("engine_hours", "total_revolutions", "total_fuel_l", "total_km", "total_km_hr",
+                "idle_hours", "idle_fuel_l", "mil_km", "cleared_km", "mil_min", "cleared_min")
 
 
 class MachineState:
@@ -32,6 +33,7 @@ class MachineState:
         self.protocols: set[str] = set()
         self.notes: list[str] = []
         self.extra_evidence: list[dict] = []
+        self.plate: dict = {}           # datos de la placa que escribe el usuario (opcionales)
         self.trend: dict[str, dict] = {}
         self._last_trend = 0.0
         self.frames = 0
@@ -66,6 +68,10 @@ class MachineState:
             self.dm1[sa] = j1939.decode_dm(data, sa, active=True)
         elif pgn == j1939.PGN_DM2:
             self.dm2[sa] = j1939.decode_dm(data, sa, active=False)
+        elif pgn == j1939.PGN_VI:
+            vin = j1939.decode_vin(data)
+            if vin:
+                ecu["vin"] = vin
         elif pgn == j1939.PGN_DM19:
             ecu["calibrations"] = j1939.decode_dm19(data)
         elif pgn == j1939.PGN_COMPONENT_ID:
@@ -147,14 +153,25 @@ class MachineState:
         comp = next((e["component"] for _, e in sorted(self.ecus.items(), key=lambda x: str(x[0]))
                      if e.get("component") and e["component"].get("make")), {})
         vin = next((e.get("vin") for e in self.ecus.values() if e.get("vin")), "")
-        brand = kb.detect_brand(comp.get("make"))
-        b = kb.brands()[brand]
+        pl = self.plate or {}
         info = {"make": "", "model": "", "serial": "", "unit": ""}
         info.update(comp)
-        if not info.get("serial") and vin:
-            info["serial"] = vin
-        return {**info, "vin": vin,
-                "brand_key": brand, "brand_name": b["nombre"], "connector": b["conector"],
+        identified = "centralita" if comp.get("make") else None
+        # Lo que no da la máquina se completa con la placa
+        if not info.get("make") and pl.get("make"):
+            info["make"], identified = pl["make"], "placa"
+        if not info.get("model") and pl.get("model"):
+            info["model"] = pl["model"]
+        if not info.get("serial"):
+            info["serial"] = vin or pl.get("serial") or ""
+        brand = kb.detect_brand(info.get("make"))
+        b = kb.brands()[brand]
+        if brand == "generico" and info.get("make"):
+            name = info["make"].strip().title()
+        else:
+            name = b["nombre"]
+        return {**info, "vin": vin, "identified_by": identified, "plate": pl,
+                "brand_key": brand, "brand_name": name, "connector": b["conector"],
                 "official_software": b["software_oficial"], "brand_note": b["notas"],
                 "machine_class": self.machine_class,
                 "machine_class_label": analysis.MACHINE_CLASSES.get(self.machine_class, analysis.MACHINE_CLASSES["generica"])[0]}
@@ -180,8 +197,9 @@ class MachineState:
                         lamps_all["mil"] = True
             dtcs.sort(key=lambda d: (not d["active"], -d["severity"], str(d["code"])))
             ecus = {sa: dict(e) for sa, e in self.ecus.items() if sa not in (0xF9, 0xFA)}
-            tamper = analysis.analyze_counters(ecus, self.machine_class, self.history, self.extra_evidence)
-            mods = analysis.analyze_modifications(ecus, self.previous_software)
+            usage, plate_ev, plate_mods = analysis.cross_checks(ecus, self.plate)
+            tamper = analysis.analyze_counters(ecus, self.machine_class, self.history, self.extra_evidence + plate_ev)
+            mods = analysis.analyze_modifications(ecus, self.previous_software, plate_mods)
             active = [d for d in dtcs if d["active"]]
             ecu_list = []
             for sa, e in sorted(ecus.items(), key=lambda x: (not isinstance(x[0], int), str(x[0]) if not isinstance(x[0], int) else f"{x[0]:03d}")):
@@ -200,6 +218,7 @@ class MachineState:
             return {
                 "updated_at": datetime.now(timezone.utc).isoformat(),
                 "health": health,
+                "usage": usage,
                 "trend": {k: {**v, "t": list(v["t"]), "v": list(v["v"])} for k, v in self.trend.items()},
                 "machine": info,
                 "lamps": lamps_all,

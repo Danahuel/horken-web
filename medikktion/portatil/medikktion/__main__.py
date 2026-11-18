@@ -45,6 +45,23 @@ def load_config(path: str | None) -> dict:
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
 
 
+def apply_demo_plate(args, sc: dict) -> None:
+    """En las pruebas, si no se escribe placa, se usa la de la máquina simulada."""
+    p = sc.get("placa") or {}
+    for attr, key in (("marca", "make"), ("modelo", "model"), ("serie_placa", "serial"), ("anio", "year"),
+                      ("horas_cuadro", "hours")):
+        if getattr(args, attr, None) in (None, "") and key in p:
+            setattr(args, attr, p[key])
+
+
+def plate_from_args(args) -> dict:
+    """Datos de la placa escritos por el usuario (solo los que tienen valor)."""
+    pl = {"make": getattr(args, "marca", None), "model": getattr(args, "modelo", None),
+          "serial": getattr(args, "serie_placa", None), "year": getattr(args, "anio", None),
+          "hours": getattr(args, "horas_cuadro", None), "km": getattr(args, "km_cuadro", None)}
+    return {k: v for k, v in pl.items() if v not in (None, "")}
+
+
 def is_network_error(e: Exception) -> bool:
     """Fallo de red (reintentar luego) frente a fallo de configuración (avisar ya)."""
     import smtplib
@@ -76,11 +93,13 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
         dbc = DbcDecoder(*args.dbc)
         print(f"DBC cargado: {len(dbc)} mensajes del fabricante")
     state = collector.MachineState(machine_class=args.clase, labour_rate=cfg.get("labour_rate", 55), dbc=dbc)
+    state.plate = plate_from_args(args)
     sess = collector.DiagnosticSession(bus, state) if bus is not None else None
     session_id = datetime.now().strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:4]
     meta = {"session_id": session_id, "operator": cfg.get("operator", args.operador),
             "location": args.ubicacion, "recipients": cfg.get("default_recipients", []),
-            "simulated": sim is not None, "started_at": datetime.now(timezone.utc).isoformat()}
+            "simulated": sim is not None, "started_at": datetime.now(timezone.utc).isoformat(),
+            "plate": state.plate}
     resilient = isinstance(sink, ResilientSink)
     n_del, mb = prune_local(args.carpeta, int(cfg.get("retencion_dias", 365)), float(cfg.get("max_mb_local", 1000)))
     n2, mb2 = prune_local(Path(args.carpeta) / "grabaciones", int(cfg.get("retencion_grabaciones_dias", 90)),
@@ -158,7 +177,7 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
             print(f"J1587 no disponible en este lector: {e}")
     if car is not None:
         from .obd_car import read_car
-        read_car(car, state, cluster_km=getattr(args, "km_cuadro", None))
+        read_car(car, state)
     time.sleep(2.0)
     hist, sw = sink.machine_history(state.machine_info().get("serial"))
     state.history, state.previous_software = hist, sw
@@ -176,7 +195,7 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
         while (t_end is None or time.time() < t_end) and not (stop is not None and stop.is_set()):
             if car is not None:
                 from .obd_car import read_car
-                read_car(car, state, cluster_km=getattr(args, "km_cuadro", None), samples=1)
+                read_car(car, state, samples=1)
             state.record_trend()
             snap = {**state.snapshot(), "recording": rec.status()}
             sink.publish(snap)
@@ -244,6 +263,13 @@ def main(argv=None):
     common.add_argument("--dbc", nargs="*", help="archivos DBC del fabricante para decodificar mensajes propios")
     common.add_argument("--sin-uds", action="store_true", help="no buscar centralitas UDS")
     common.add_argument("--grabar", action="store_true", help="grabar todas las tramas CAN (archivo .blf)")
+    pl = common.add_argument_group("datos de la placa (opcionales, para identificar y comprobar)")
+    pl.add_argument("--marca")
+    pl.add_argument("--modelo")
+    pl.add_argument("--serie-placa", help="nº de serie de la placa de la máquina")
+    pl.add_argument("--anio", type=int, help="año de fabricación")
+    pl.add_argument("--horas-cuadro", type=float, help="horas que marca el cuadro")
+    pl.add_argument("--km-cuadro", type=float, help="km que marca el cuadro")
     d = sub.add_parser("demo", parents=[common], help="probar sin adaptador con una máquina simulada")
     d.add_argument("--escenario", default="cat320", choices=list(simulator.SCENARIOS))
     r = sub.add_parser("leer", parents=[common], help="leer una máquina real")
@@ -255,7 +281,6 @@ def main(argv=None):
     r.add_argument("--j1587", action="store_true", help="RP1210: leer también J1708/J1587 (máquinas antiguas)")
     c = sub.add_parser("coche", parents=[common], help="coche/furgoneta por OBD-II con un ELM327")
     c.add_argument("--puerto", help="COM5, /dev/ttyUSB0... (vacío = buscar)")
-    c.add_argument("--km-cuadro", type=float, help="km que marca el cuadro, para compararlos con la centralita")
     rp = sub.add_parser("reproducir", parents=[common], help="reproduce una grabación .blf como si fuera la máquina")
     rp.add_argument("archivo")
     rp.add_argument("--velocidad", type=float, default=1.0, help="1 = tiempo real, 5 = cinco veces más rápido")
@@ -329,6 +354,7 @@ def main(argv=None):
         sc = simulator.SCENARIOS[args.escenario]
         if args.clase == "generica":
             args.clase = sc["machine_class"]
+        apply_demo_plate(args, sc)
         print(f"SIMULADOR: {sc['descripcion']}")
         machine_bus = can.Bus(interface="virtual", channel="medikktion")
         tool_bus = can.Bus(interface="virtual", channel="medikktion")

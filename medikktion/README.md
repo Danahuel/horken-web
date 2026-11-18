@@ -67,6 +67,14 @@ deja de enviar más de 20 s. Probar el aviso en la demo web: añadir `?corte=1` 
 (Vector BLF, legible con python-can, CANalyzer, BusMaster…). `python -m medikktion reproducir archivo.blf
 [--velocidad 5]` la reproduce como si la máquina estuviera conectada: mismo diagnóstico, comprobado en pruebas.
 
+## Comprobaciones de horómetro y procedencia
+
+Horas entre centralitas · revoluciones totales (régimen medio de vida) · gasoil total (consumo medio) ·
+horas al ralentí frente a horas totales · tiempo desde el último borrado de averías (DM21) · km entre contadores ·
+horas del cuadro frente a centralita · horas por año según el año de fabricación · nº de serie de la placa frente
+a centralitas · centralitas de otra máquina · cambios de software/calibración entre revisiones · revisiones anteriores
+de la misma máquina.
+
 ## Protocolos y bibliotecas
 
 | Protocolo | Para qué máquinas | Biblioteca | Lector |
@@ -89,7 +97,7 @@ python3 -m medikktion demo --escenario cat320 --segundos 20   # Caterpillar con 
 python3 -m medikktion demo --escenario arjes --segundos 20    # Arjes con centralita de otra máquina
 python3 -m medikktion demo --escenario hamm --segundos 20     # Hamm sin manipulación
 python3 -m medikktion demo --escenario fuchs --segundos 20    # Fuchs MHL: J1939 + controlador UDS
-python3 -m pytest -q                                           # 32 pruebas automáticas
+python3 -m pytest -q                                           # 34 pruebas automáticas
 ```
 En Windows usa `py` en lugar de `python3`, o directamente `diagnostico.bat` → opción 3.
 Genera `sesiones/<id>.json` y `sesiones/<id>.pdf`.

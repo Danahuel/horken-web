@@ -227,14 +227,45 @@ class SummaryTab extends StatelessWidget {
         ),
       ],
 
+      if (s.usage.values.any((v) => v != null)) ...[
+        const SectionLabel('Uso de la máquina'),
+        Panel(
+          child: Column(children: [
+            if (s.usage['idle_pct'] != null)
+              _kv(context, 'Al ralentí', '${fmtNum(s.usage['idle_pct'], decimals: 0)} % de su vida · '
+                  '${fmtNum(s.usage['idle_hours'], decimals: 0)} h'),
+            if (s.usage['idle_fuel_l'] != null)
+              _kv(context, 'Gasoil al ralentí', '${fmtNum(s.usage['idle_fuel_l'], decimals: 0)} L'),
+            if (s.usage['fuel_per_hour'] != null)
+              _kv(context, 'Consumo medio', '${fmtNum(s.usage['fuel_per_hour'])} L/h'),
+            if (s.usage['avg_rpm'] != null) _kv(context, 'Régimen medio', '${fmtNum(s.usage['avg_rpm'], decimals: 0)} rpm'),
+            if (s.usage['hours_per_year'] != null)
+              _kv(context, 'Uso anual', '${fmtNum(s.usage['hours_per_year'], decimals: 0)} h/año'),
+            if (s.usage['cleared_min'] != null)
+              _kv(context, 'Último borrado de averías', 'hace ${fmtNum((s.usage['cleared_min'] as num) / 60, decimals: (s.usage['cleared_min'] as num) < 600 ? 1 : 0)} h de motor'),
+            _kv(context, 'Con testigo encendido',
+                s.usage['mil_min'] == null ? '—' : '${fmtNum((s.usage['mil_min'] as num) / 60)} h', last: true),
+          ]),
+        ),
+      ],
+
       const SectionLabel('Ficha técnica'),
       Panel(
         child: Column(children: [
+          _kv(context, 'Identificación', switch (m['identified_by']) {
+            'centralita' => 'La máquina se identifica sola',
+            'placa' => 'Por los datos de la placa',
+            _ => 'Sin identificar',
+          }),
           _kv(context, 'Fabricante', '${m['brand_name'] ?? ''}'),
           _kv(context, 'Modelo', '${m['model'] ?? ''}'),
           _kv(context, 'Tipo', '${m['machine_class_label'] ?? ''}'),
           _kv(context, 'Nº de serie', '${m['serial'] ?? ''}', mono_: true),
           if ('${m['vin'] ?? ''}'.isNotEmpty) _kv(context, 'VIN', '${m['vin']}', mono_: true),
+          if (s.plate['serial'] != null) _kv(context, 'Placa · nº serie', '${s.plate['serial']}', mono_: true),
+          if (s.plate['year'] != null) _kv(context, 'Placa · año', '${s.plate['year']}'),
+          if (s.plate['hours'] != null) _kv(context, 'Cuadro · horas', '${fmtNum(s.plate['hours'], decimals: 0)} h'),
+          if (s.plate['km'] != null) _kv(context, 'Cuadro · km', '${fmtNum(s.plate['km'], decimals: 0)} km'),
           _kv(context, 'Protocolos', s.protocols.join(' · ')),
           _kv(context, 'Conector', '${m['connector'] ?? ''}'),
           _kv(context, 'Software oficial', '${m['official_software'] ?? ''}', last: true),

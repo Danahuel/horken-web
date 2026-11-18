@@ -28,6 +28,7 @@ def _pad(b: bytes) -> bytes:
 
 SCENARIOS = {
     "cat320": {
+        "placa": {"make": "Caterpillar", "model": "320", "serial": "SIM0001234", "year": 2014, "hours": 4213},
         "descripcion": "Caterpillar 320 (excavadora) con horas rebajadas en la ECU de motor y 6 averías activas",
         "machine_class": "excavadora_20t",
         "ecus": {
@@ -35,6 +36,7 @@ SCENARIOS = {
                    "ecu_id": "SIM-472-1234*SIMECU001*MOTOR*ECM*CATERPILLAR*",
                    "hours": 4213.4, "revs": 829_600_000, "fuel": 148_100,
                    "dm19": [("SIM-CAL-C7.1-A07", 0x5A3C91E2)],
+                   "vin": "SIMCAT32000001234", "idle_h": 4444.6, "idle_fuel": 15110, "cleared_min": 95, "mil_min": 610,
                    "dm1": [(651, 5, 3), (100, 18, 2)], "lamps": Lamps(amber_warning=1),
                    "dm2": [(97, 15, 12), (168, 18, 4), (3719, 16, 7)]},
             0x3D: {"software": ["SIM-ATC-3311-02"], "dm1": [(4364, 18, 5), (3226, 2, 1)],
@@ -50,12 +52,14 @@ SCENARIOS = {
                           fuel_level=63.8, def_level=41.2, load_mean=0.62, seed=320),
     },
     "fuchs": {
+        "placa": {"make": "Fuchs", "model": "MHL350", "serial": "SIM-MHL-03521", "year": 2019, "hours": 7341},
         "descripcion": "Fuchs MHL (manipuladora) con motor Deutz por J1939 y controlador de máquina UDS",
         "machine_class": "manipuladora",
         "ecus": {
             0x00: {"component": "FUCHS*MHL350*SIM-MHL-03521*GRUA-2*", "software": ["SIM-DEUTZ-EMR5-4.03"],
                    "hours": 7340.5, "revs": 7340.5 * 60 * 1450, "fuel": 7340.5 * 19,
                    "dm19": [("SIM-DEUTZ-TCD6.1", 0x1F22A0B7)],
+                   "idle_h": 2055.3, "idle_fuel": 8430, "cleared_min": 41000, "mil_min": 0,
                    "dm1": [(3719, 16, 3)], "lamps": Lamps(amber_warning=1), "dm2": [(110, 16, 2)]},
             0x17: {"component": "FUCHS*MHL350*SIM-MHL-03521*GRUA-2*", "software": ["SIM-FUCHS-DSP-7.2"],
                    "hours": 7341.1, "dm1": [], "dm2": []},
@@ -67,11 +71,13 @@ SCENARIOS = {
                           fuel_level=72.5, def_level=66.0, load_mean=0.5, cycle_s=34, seed=350),
     },
     "hamm": {
+        "placa": {"make": "Hamm", "model": "H13i", "serial": "SIM-H13-00042", "year": 2020, "hours": 3121},
         "descripcion": "Rodillo Hamm sin manipulación, 1 avería leve de combustible",
         "machine_class": "rodillo",
         "ecus": {
             0x00: {"component": "HAMM*H13i*SIM-H13-00042*R-03*", "software": ["SIM-DEUTZ-EMR4-1.2"],
                    "hours": 3120.6, "revs": 3120.6 * 60 * 1550, "fuel": 3120.6 * 9.5,
+                   "idle_h": 967.4, "idle_fuel": 2030, "cleared_min": 60000, "mil_min": 45,
                    "dm1": [(94, 18, 1)], "lamps": Lamps(amber_warning=1), "dm2": [(168, 17, 2)]},
             0x17: {"component": "HAMM*H13i*SIM-H13-00042*R-03*", "software": ["SIM-HAMM-DSP-3.4"],
                    "hours": 3120.4, "dm1": [], "dm2": []},
@@ -82,11 +88,13 @@ SCENARIOS = {
                           seed=13),
     },
     "arjes": {
+        "placa": {"make": "Arjes", "model": "VZ950", "serial": "SIM-ARJ-00911", "year": 2018, "hours": 850},
         "descripcion": "Trituradora Arjes con centralita de motor procedente de otra máquina",
         "machine_class": "trituradora",
         "ecus": {
             0x00: {"component": "ARJES*VZ950*SIM-ARJ-OTRA-77*", "software": ["SIM-ENG-ARJ-7.1"],
                    "hours": 850.2, "revs": 850.2 * 60 * 1600, "fuel": 850.2 * 38,
+                   "idle_h": 170.1, "idle_fuel": 1020, "cleared_min": 2400, "mil_min": 0,
                    "dm1": [(3251, 16, 4), (110, 16, 1)], "lamps": Lamps(amber_warning=1), "dm2": []},
             0x17: {"component": "ARJES*VZ950*SIM-ARJ-00911*", "software": ["SIM-ARJ-HMI-2.0"],
                    "hours": 6420.7, "dm1": [], "dm2": []},
@@ -171,6 +179,12 @@ class SimulatedMachine:
             self._send(pgn, sa, _u(e["hours"] / 0.05, 4) + (_u(revs / 1000, 4) if revs else b"\xFF" * 4))
         elif pgn == j1939.PGN_LFC and e.get("fuel"):
             self._send(pgn, sa, _u(30 / 0.5, 4) + _u(e["fuel"] / 0.5, 4))
+        elif pgn == j1939.PGN_VI and e.get("vin"):
+            self._send(pgn, sa, (e["vin"] + "*").encode())
+        elif pgn == j1939.PGN_IO and e.get("idle_h") is not None:
+            self._send(pgn, sa, _u(e["idle_fuel"] / 0.5, 4) + _u(e["idle_h"] / 0.05, 4))
+        elif pgn == j1939.PGN_DM21 and e.get("cleared_min") is not None:
+            self._send(pgn, sa, b"\xFF\xFF\xFF\xFF" + _u(e["mil_min"], 2) + _u(e["cleared_min"], 2))
         elif pgn == j1939.PGN_DM19 and e.get("dm19"):
             self._send(pgn, sa, j1939.encode_dm19(e["dm19"]))
         elif pgn == j1939.PGN_DM2:

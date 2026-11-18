@@ -38,6 +38,7 @@ def _structure(scenario: str, seconds: float = 4.0) -> dict:
         e.start()
         uds_ecus.append((e, ub))
     st = collector.MachineState(sc["machine_class"])
+    st.plate = dict(sc.get("placa") or {})
     sess = collector.DiagnosticSession(tbus, st)
     sim.start()
     sess.start()

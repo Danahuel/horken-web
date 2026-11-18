@@ -106,6 +106,10 @@ Comprueba todo con `diagnostico.bat` → opción **5 (Comprobar)**: todo en `[ O
 3. Conecta el cable al conector de diagnóstico de la máquina (Deutsch 9 pines, suele estar en cabina),
    da el contacto (no hace falta arrancar), elige tipo de máquina y lugar, activa **Grabar todas las tramas**
    y pulsa **EMPEZAR LECTURA**. Arriba se encienden las luces **LECTOR** y **BUS CAN**.
+5. Recomendado: abre **Datos de la placa** y apunta marca, modelo, nº de serie de la placa, año y las
+   **horas que marca el cuadro**. No es obligatorio (la máquina suele identificarse sola), pero con ellos el
+   programa comprueba además: que la centralita es de esa máquina, que el cuadro y la centralita dicen lo mismo
+   y si las horas son normales para su edad.
 4. Escribe el nombre del lector, el tipo de máquina y la ciudad. Los datos aparecen en los móviles.
 
 Para coches y furgonetas: lector **ELM327** (USB o Bluetooth) → opción **2**.
