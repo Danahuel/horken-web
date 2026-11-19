@@ -21,6 +21,7 @@ class Session {
   Map<String, dynamic> get purchase => _m('purchase');
   Map<String, dynamic> get maintenance => _m('maintenance');
   Map<String, dynamic> get pricing => _m('pricing');
+  Map<String, dynamic> get pumpTest => _m('pump_test');
   List<Map<String, dynamic>> get history => _l('history');
   List<Map<String, dynamic>> get workOrders => _l('work_orders');
   Map<String, dynamic>? workOrderFor(String code) {
@@ -123,6 +124,9 @@ const measures = <String, Measure>{
   'fuel_temp_c': Measure('fuel_temp_c', 'Combustible (temp.)', '°C', decimals: 1, min: 0, max: 90, hi: 70),
   'speed_kmh': Measure('speed_kmh', 'Velocidad', 'km/h', decimals: 0, min: 0, max: 120),
   'load_pct': Measure('load_pct', 'Carga motor', '%', decimals: 0, min: 0, max: 100),
+  'pump1_bar': Measure('pump1_bar', 'Bomba 1', 'bar', decimals: 0, min: 0, max: 400),
+  'pump2_bar': Measure('pump2_bar', 'Bomba 2', 'bar', decimals: 0, min: 0, max: 400),
+  'pilot_bar': Measure('pilot_bar', 'Pilotaje', 'bar', decimals: 1, min: 0, max: 60),
 };
 
 Measure measureFor(String key, Map p) => measures[key] ??
@@ -150,7 +154,7 @@ String eur(dynamic a) => '${fmtNum(a, decimals: 0)} €';
 
 const kindLabels = {
   'active': 'activa', 'emissions': 'activa · emisiones', 'pending': 'pendiente', 'permanent': 'permanente',
-  'emissions_prev': 'emisiones anterior', 'history': 'histórica',
+  'emissions_prev': 'emisiones anterior', 'history': 'histórica', 'prueba': 'prueba de bombas',
 };
 
 const _months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre',

@@ -158,6 +158,60 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
             print(f"\nGrabación guardada: {path} ({rec.frames} tramas)")
         sink.publish({**state.snapshot(), "recording": rec.status()})
 
+    pump_rec = {"auto": False}
+
+    def pump(action: str, payload: dict | None = None) -> dict:
+        """Prueba de bombas desde la estación: iniciar, capturar, manual, siguiente, anterior, terminar, cancelar."""
+        payload = payload or {}
+        if action == "iniciar":
+            on_step = sim.set_operator if hasattr(sim, "set_operator") else None
+            out = state.start_pump_test(payload.get("alivio") or None, payload.get("pilotaje") or None, on_step)
+            if sess is not None and not rec.active:     # se graba para poder aprender las presiones de la centralita
+                rec.start(sess.notifier)
+                pump_rec["auto"] = True
+                print(f"\nPrueba de bombas: grabando tramas en {rec.path}")
+        else:
+            out = state.pump_action(action, payload.get("valores"))
+        if action == "terminar":
+            threading.Thread(target=learn_pressures, daemon=True).start()
+        sink.publish({**state.snapshot(), "recording": rec.status()})
+        return out
+
+    def learn_pressures():
+        """Tras una prueba con manómetro: busca en la grabación qué mensaje lleva esas presiones."""
+        from . import hidraulica
+        pt = state.pump_test
+        if pt is None or rec.path is None:
+            return
+        manual = [m for m in pt.marks if m["source"] == "manometro"]
+        path = rec.stop() if pump_rec["auto"] and rec.active else rec.path
+        pump_rec["auto"] = False
+        if not manual or state.pressure_profile:
+            return
+        time.sleep(0.5)
+        info = state.machine_info()
+        alivio = next((s_["nominal"] for s_ in pt.steps if s_["kind"] == "alivio"), 300)
+        pil = next((s_["nominal"] for s_ in pt.steps if s_["kind"] == "pilotaje"), None)
+        try:
+            prof = hidraulica.profile_from_recording(path, alivio, pil, {"pump_test": {"marks": pt.marks}},
+                                                     info["brand_key"], info.get("model", ""))
+        except Exception as e:  # noqa: BLE001
+            print(f"\nNo se pudo analizar la grabación de la prueba: {e}")
+            return
+        if prof["verificado"] == "manometro" and info.get("serial"):
+            prof["solo_serie_prefijo"] = info["serial"]      # solo para ESTA máquina
+            name = f"auto_{info['brand_key']}_{(info.get('model') or 'x').replace(' ', '')}_{info['serial']}"
+            out = hidraulica.PRESION_DIR / f"{name}.json"
+            out.write_text(json.dumps({k: v for k, v in prof.items() if k != "candidatos"}, ensure_ascii=False,
+                                      indent=2), encoding="utf-8")
+            state.pressure_profiles = hidraulica.load_profiles()
+            state._pressure_map_at = 0
+            print(f"\nPresiones de bomba encontradas en la centralita y confirmadas con el manómetro "
+                  f"({', '.join(prof['senales'])}). Esta máquina las mostrará en vivo a partir de ahora.")
+        else:
+            print("\nLa centralita de esta máquina no parece emitir las presiones de bomba (o no coinciden con el "
+                  "manómetro). La prueba queda hecha con las lecturas del manómetro.")
+
     def uds_scan():
         from .uds import UdsScanner
         n = UdsScanner(bus, sess.notifier).scan(state)
@@ -199,7 +253,7 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
     sink.watch_report_requests(send_report, set_recording)
     if hooks is not None:
         hooks.update({
-            "record": set_recording, "report": send_report, "session_id": session_id, "meta": meta,
+            "record": set_recording, "report": send_report, "session_id": session_id, "meta": meta, "pump": pump,
             "snapshot": lambda: {**meta, **state.snapshot(), "recording": rec.status()},
             "connection": lambda: (sink.connection_info() | {"pending": sink.pending_count()}) if resilient else None,
         })
@@ -317,6 +371,14 @@ def main(argv=None):
     ca = sub.add_parser("codigo-app", help="genera el código de la app desde google-services.json")
     ca.add_argument("archivo")
     sub.add_parser("adaptadores", help="Windows: lista los lectores RP1210 instalados")
+    bp = sub.add_parser("buscar-presiones", help="busca en una grabación qué mensaje lleva las presiones de bomba")
+    bp.add_argument("grabacion", help="archivo .blf (mejor grabado durante una prueba de bombas)")
+    bp.add_argument("--alivio", type=float, required=True, help="presión de alivio del manual (bar)")
+    bp.add_argument("--pilotaje", type=float, help="presión de pilotaje del manual (bar)")
+    bp.add_argument("--sesion", help="JSON de la sesión con la prueba de bombas (lecturas de manómetro)")
+    bp.add_argument("--marca", default="", help="caterpillar, fuchs, hamm, arjes... (clave de kb/marcas.json)")
+    bp.add_argument("--modelo", default="")
+    bp.add_argument("--guardar", help="nombre del perfil a guardar en kb/presiones (p. ej. cat_320_gc)")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.WARNING)
     for stream in (sys.stdout, sys.stderr):  # consolas Windows antiguas: nunca fallar por un acento o "→"
@@ -362,6 +424,27 @@ def main(argv=None):
         Path("codigo_app.txt").write_text(code + "\n", encoding="utf-8")
         print(code)
         return 0
+    if args.cmd == "buscar-presiones":
+        from . import hidraulica
+        ses = json.loads(Path(args.sesion).read_text(encoding="utf-8")) if args.sesion else None
+        prof = hidraulica.profile_from_recording(args.grabacion, args.alivio, args.pilotaje, ses, args.marca, args.modelo)
+        for ch, cands in prof["candidatos"].items():
+            print(f"\n{hidraulica.CHANNELS[ch]}:")
+            if not cands:
+                print("  ningún candidato (¿se llevó la hidráulica contra su tope durante la grabación?)")
+            for c in cands[:4]:
+                man = f" · error frente al manómetro {c['manometer_error_pct']} %" if c["manometer_error_pct"] is not None else ""
+                print(f"  PGN {c['pgn']} (0x{c['pgn']:04X}) de 0x{c['sa']:02X} · byte {c['byte']} · {c['len']} byte(s) "
+                      f"{c['orden']} · escala {c['escala']:g} bar → pico {c['peak_bar']} bar, reposo {c['base_bar']} bar"
+                      f"{man} · puntuación {c['score']}")
+        print(f"\nSeñales elegidas: {', '.join(prof['senales']) or 'ninguna'} · "
+              f"{'CONFIRMADO con manómetro' if prof['verificado'] else 'SIN CONFIRMAR: comprobar con un manómetro antes de fiarse'}")
+        if args.guardar and prof["senales"]:
+            out = hidraulica.PRESION_DIR / f"{args.guardar}.json"
+            out.write_text(json.dumps({k: v for k, v in prof.items() if k != "candidatos"}, ensure_ascii=False, indent=2),
+                           encoding="utf-8")
+            print(f"Perfil guardado en {out}: a partir de ahora esa máquina muestra sus presiones en vivo.")
+        return
     if args.cmd == "adaptadores":
         from .rp1210 import list_adapters
         found = list_adapters()

@@ -40,6 +40,11 @@ class Perfil:
     work_share: float = 0.82         # fracción del tiempo trabajando (resto, pausas)
     load_mean: float = 0.55
     seed: int = 7
+    # Hidráulica (solo si la máquina tiene sensores de presión de bomba)
+    relief_p1: float = 0.0           # bar de alivio que alcanza la bomba 1 (0 = sin sensores)
+    relief_p2: float = 0.0
+    standby_bar: float = 32.0
+    pilot_bar: float = 40.0
 
 
 @dataclass
@@ -56,10 +61,14 @@ class Motor:
                   "def_level": p.def_level, "battery": 27.6, "boost": 10.0}
         self._pause_until = 0.0
         self._next_pause = self.rnd.uniform(120, 260)
+        self.operator: str | None = None   # lo que hace el operador en una prueba guiada
+        self.s.update({"p1": p.standby_bar, "p2": p.standby_bar, "pilot": p.pilot_bar})
 
     # --- consigna de trabajo ------------------------------------------------
     def _targets(self):
         p = self.p
+        if self.operator:                       # prueba guiada: motor alto, sin ciclos de trabajo
+            return p.rated_rpm, 0.9 if self.operator.startswith("alivio") else 0.12
         if self.t >= self._next_pause:
             self._pause_until = self.t + self.rnd.uniform(25, 60) * (1 - p.work_share) / 0.18
             self._next_pause = self._pause_until + self.rnd.uniform(140, 300)
@@ -110,4 +119,33 @@ class Motor:
         }
         if p.has_trans:
             out["trans_oil_temp_c"] = round(s["trans"], 3)
+        if p.relief_p1:
+            out.update(self._hydraulics(dt, load))
         return out
+
+    def _hydraulics(self, dt: float, load: float) -> dict:
+        """Presiones de bomba: reposo, trabajo y picos contra tope (válvula de alivio)."""
+        p, s, g = self.p, self.s, self.rnd.gauss
+        op = self.operator
+        sb = p.standby_bar
+        if op in ("reposo", "pilotaje"):
+            t1 = t2 = sb
+        elif op == "alivio_p1":
+            t1, t2 = p.relief_p1, sb
+        elif op == "alivio_p2":
+            t1, t2 = sb, p.relief_p2
+        elif self.t < self._pause_until:
+            t1 = t2 = sb
+        else:
+            phase = (self.t % p.cycle_s) / p.cycle_s
+            t1 = sb + load * 0.72 * p.relief_p1
+            t2 = sb + load * 0.55 * p.relief_p2
+            if 0.29 < phase < 0.34:              # cazo contra tope al final de cada pasada
+                t1 = p.relief_p1
+        a = 1 - math.exp(-dt / 0.25)
+        for k, tgt, ok in (("p1", t1, p.relief_p1), ("p2", t2, p.relief_p2)):
+            s[k] += (tgt - s[k]) * a + g(0, 1.4)
+            s[k] = min(s[k], ok + 2.5)            # la válvula de alivio no deja pasar de ahí
+        s["pilot"] += (p.pilot_bar - s["pilot"]) * a + g(0, 0.25)
+        return {"pump1_bar": round(max(0.0, s["p1"]), 1), "pump2_bar": round(max(0.0, s["p2"]), 1),
+                "pilot_bar": round(s["pilot"], 2)}

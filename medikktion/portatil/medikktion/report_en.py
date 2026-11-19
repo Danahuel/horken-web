@@ -34,7 +34,7 @@ SPN_EN = {
 
 SEV_EN = {1: "Information", 2: "Minor", 3: "Moderate", 4: "Serious", 5: "Critical"}
 KIND_EN = {"active": "ACTIVE", "emissions": "ACTIVE (EMISSIONS)", "pending": "PENDING", "permanent": "PERMANENT",
-           "emissions_prev": "EMISSIONS PREVIOUS", "history": "HISTORY"}
+           "emissions_prev": "EMISSIONS PREVIOUS", "history": "HISTORY", "prueba": "PUMP TEST"}
 
 MAINT_EN = {
     "aceite_motor": "Engine oil and filter", "filtros_combustible": "Fuel filters (pre and main)",
@@ -133,6 +133,28 @@ PHRASES.update({
     "Temperatura refrigerante": "Coolant temperature", "Presión aceite motor": "Engine oil pressure", "Par motor real": "Actual engine torque",
     "Excavadora 14-25 t": "Excavator 14-25 t", "Manipuladora de material": "Material handler",
     "Trituradora / biotrituradora": "Shredder", "Rodillo compactador": "Compaction roller", "Demostración": "Demo",
+    # Prueba de bombas
+    "Prueba de bombas hidráulicas": "Hydraulic pump test", "Bombas: hay que actuar": "Pumps: action needed",
+    "Bombas: justas, vigilar": "Pumps: borderline, monitor", "Bombas en buen estado (presión)": "Pumps in good condition (pressure)",
+    "Prueba sin lecturas": "Test without readings", "Paso": "Step", "Canal": "Channel", "Lectura": "Reading",
+    "Referencia": "Reference", "Estado": "Status", "Fuente": "Source", "Bien": "Good", "Justa": "Borderline",
+    "Baja": "Low", "Alta": "High", "manómetro": "gauge", "Bomba 1": "Pump 1", "Bomba 2": "Pump 2", "Pilotaje": "Pilot",
+    "Presión de reposo": "Standby pressure", "Alivio principal · bomba 1": "Main relief · pump 1",
+    "Alivio principal · bomba 2": "Main relief · pump 2", "Presión de pilotaje": "Pilot pressure",
+    "Diferencia entre bombas al alivio": "Difference between pumps at relief",
+    "(más de un 5 %: la más baja rinde menos)": "(over 5 %: the lower one is weaker)", "(iguales)": "(equal)",
+    "La presión indica si bombas y válvulas aguantan; el caudal (rapidez) se comprueba con tiempos de ciclo o caudalímetro.":
+        "Pressure shows whether pumps and valves hold; flow (speed) is checked with cycle times or a flow meter.",
+    "Lecturas de la centralita.": "Readings from the control unit.", "Lecturas de manómetro de taller.": "Workshop gauge readings.",
+    "Lecturas de centralita y de manómetro.": "Control unit and gauge readings.",
+    "Referencias del manual de la máquina.": "References from the machine manual.",
+    "Referencias orientativas": "Indicative references", "confirmar con el manual de la máquina.": "confirm with the machine manual.",
+    "Lo que sale de la prueba aparece en Averías con su procedimiento y coste.":
+        "Findings from the test appear under Faults with procedure and cost.",
+    "no llega a la presión de alivio": "does not reach relief pressure", "Prueba de presión:": "Pressure test:",
+    "Las dos bombas se quedan bajas por igual": "Both pumps equally low", "Presión de reposo alta": "High standby pressure",
+    "Presión de pilotaje baja": "Low pilot pressure", "por encima de lo normal": "above normal", "bar de": "bar of",
+    "Prueba de bombas": "Pump test", "PRUEBA DE BOMBAS": "PUMP TEST",
 })
 _ORDERED = sorted(PHRASES.items(), key=lambda kv: -len(kv[0]))
 _EVIDENCE_EN = {
@@ -167,10 +189,14 @@ def tr(text: str) -> str:
 
 
 def dtc_name(d: dict) -> str:
+    if d.get("kind") == "prueba":
+        return tr(d.get("name", ""))
     if d.get("name_language") == "en":
         return d.get("name", "")
     return SPN_EN.get(d.get("spn") or -1, d.get("name", ""))
 
 
 def fmi_text(d: dict) -> str:
+    if d.get("kind") == "prueba":
+        return tr(d.get("fmi_text", ""))
     return FMI_EN.get(d["fmi"], d.get("fmi_text", "")) if d.get("fmi") is not None else d.get("fmi_text", "")

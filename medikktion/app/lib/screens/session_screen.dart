@@ -7,6 +7,7 @@ import '../data/session.dart';
 import '../theme.dart';
 import '../widgets/instruments.dart';
 import '../widgets/journal.dart';
+import '../widgets/pump_test.dart';
 import '../widgets/recording.dart';
 import '../widgets/status.dart';
 import '../widgets/work_order.dart';
@@ -157,6 +158,10 @@ class SummaryTab extends StatelessWidget {
       if (s.purchase.isNotEmpty) ...[
         const SectionLabel('Valoración de compra'),
         _PurchasePanel(s: s),
+      ],
+      if (s.pumpTest.isNotEmpty) ...[
+        const SectionLabel('Prueba de bombas'),
+        PumpTestPanel(s: s),
       ],
 
       // Testigos
@@ -422,7 +427,8 @@ class MeasuresTab extends StatelessWidget {
     final readouts = ['boost_kpa', 'fuel_rate_lh', 'battery_v', 'torque_pct', 'fuel_level_pct', 'def_level_pct',
       'intake_temp_c', 'ambient_c'].where((k) => _v(k) != null).toList();
     final extra = s.live.keys.where((k) => !measures.containsKey(k)).toList();
-    final trends = ['hyd_oil_temp_c', 'coolant_c', 'oil_pressure_kpa', 'rpm', 'trans_oil_temp_c', 'oil_temp_c', 'boost_kpa']
+    final trends = ['hyd_oil_temp_c', 'pump1_bar', 'pump2_bar', 'coolant_c', 'oil_pressure_kpa', 'rpm', 'trans_oil_temp_c',
+      'oil_temp_c', 'boost_kpa']
         .where((k) => s.trend[k] is Map).toList();
 
     return ListView(padding: _page, children: [
@@ -442,6 +448,24 @@ class MeasuresTab extends StatelessWidget {
           if (_v('oil_pressure_kpa') != null)
             Expanded(child: Dial(m: measures['oil_pressure_kpa']!, value: _v('oil_pressure_kpa')!, majorStep: 1)),
         ]),
+      if (_v('pump1_bar') != null || _v('pump2_bar') != null) ...[
+        SectionLabel('Hidráulica', trailing: Text('presión de bombas', style: tx(context, 11, color: p.text3))),
+        Row(children: [
+          for (final k in ['pump1_bar', 'pump2_bar'].where((k) => _v(k) != null)) ...[
+            if (k == 'pump2_bar' && _v('pump1_bar') != null) const SizedBox(width: 10),
+            Expanded(child: Dial(m: measures[k]!, value: _v(k)!, majorStep: 100,
+                tickLabel: (v) => fmtNum(v / 100, decimals: 0))),
+          ],
+        ]),
+        if (_v('pilot_bar') != null) ...[
+          const SizedBox(height: 10),
+          Readout(m: measures['pilot_bar']!, value: _v('pilot_bar')!),
+        ],
+      ],
+      if (s.pumpTest.isNotEmpty) ...[
+        const SectionLabel('Prueba de bombas'),
+        PumpTestPanel(s: s),
+      ],
       if (thermos.isNotEmpty) ...[
         const SectionLabel('Temperaturas'),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

@@ -27,8 +27,12 @@ DEMOS = {
 # País (tarifa), km de desplazamiento, precio que piden y lecturas anteriores de la misma máquina
 EXTRA = {
     "cat320": {"pais": "DE", "km": 35, "precio": 68000,
+               "bombas": {"modo": "centralita", "alivio": 343, "pilotaje": 40},
                "historia": [{"date": "2025-04-11", "engine_hours": 9412.0, "active": 2, "health": 71, "location": "Augsburgo"}]},
     "fuchs": {"pais": "DE", "km": 20, "precio": None,
+              "bombas": {"modo": "manometro", "alivio": 350, "pilotaje": 35,
+                         "valores": {"reposo": {"pump1_bar": 24, "pump2_bar": 26}, "alivio_p1": {"pump1_bar": 352},
+                                     "alivio_p2": {"pump2_bar": 336}, "pilotaje": {"pilot_bar": 34.6}}},
               "historia": [{"date": "2025-05-20", "engine_hours": 6410.2, "active": 1, "health": 88, "location": "Hamburgo"},
                            {"date": "2025-11-03", "engine_hours": 6893.7, "active": 0, "health": 96, "location": "Hamburgo"}],
               "ordenes": [{"code": "SPN 110 FMI 16", "name": "Temperatura del refrigerante motor", "cost_eur": 640,
@@ -69,6 +73,9 @@ def _structure(scenario: str, seconds: float = 4.0) -> dict:
             from .uds import UdsScanner, default_targets
             UdsScanner(tbus, sess.notifier, timeout=0.3).scan(
                 st, [t for t in default_targets() if t.key.startswith("UDS 29b")])
+        bombas = ex.get("bombas")
+        if bombas:
+            _pump_test(st, sim, bombas)
         time.sleep(seconds)
         return st.snapshot()
     finally:
@@ -79,6 +86,28 @@ def _structure(scenario: str, seconds: float = 4.0) -> dict:
             ub.shutdown()
         mbus.shutdown()
         tbus.shutdown()
+
+
+def _pump_test(st, sim, cfg: dict) -> None:
+    """Prueba de bombas de demostración: por la centralita (Cat) o con manómetro (Fuchs)."""
+    st.start_pump_test(cfg.get("alivio"), cfg.get("pilotaje"), on_step=sim.set_operator)
+    for step in st.pump_test.steps:
+        if cfg["modo"] == "centralita":
+            time.sleep(2.6)
+            st.pump_action("capturar")
+        else:
+            for ch in step["channels"]:
+                st.pump_action("manual", {ch: cfg["valores"][step["id"]][ch]})
+        st.pump_action("siguiente")
+    st.pump_action("terminar")
+
+
+_PRESS_LABELS = {"pump1_bar": ("Presión bomba 1", "bar"), "pump2_bar": ("Presión bomba 2", "bar"),
+                 "pilot_bar": ("Presión de pilotaje", "bar")}
+
+
+def _info(k):
+    return _PRESS_LABELS.get(k) or j1939.PARAM_INFO[k]
 
 
 def build(scenario: str) -> dict:
@@ -95,14 +124,14 @@ def build(scenario: str) -> dict:
         if i % int(TREND_EVERY / 0.5) == 0:
             for k in collector.MachineState.TREND_KEYS:
                 if k in values:
-                    desc, unit = j1939.PARAM_INFO[k]
+                    desc, unit = _info(k)
                     tr = trend.setdefault(k, {"label": desc, "unit": unit, "t": [], "v": []})
                     tr["t"].append(round(t0 + i * 0.5, 1))
                     tr["v"].append(values[k])
     for tr in trend.values():
         tr["t"], tr["v"] = tr["t"][-180:], tr["v"][-180:]
-    snap["live"] = {k: {"value": v, "unit": j1939.PARAM_INFO[k][1], "label": j1939.PARAM_INFO[k][0], "source": 0}
-                    for k, v in values.items() if k in j1939.PARAM_INFO}
+    snap["live"] = {k: {"value": v, "unit": _info(k)[1], "label": _info(k)[0], "source": 0xE6 if k in _PRESS_LABELS else 0}
+                    for k, v in values.items() if k in j1939.PARAM_INFO or k in _PRESS_LABELS}
     snap["trend"] = trend
     started = now - timedelta(minutes=minutes)
     snap.update({

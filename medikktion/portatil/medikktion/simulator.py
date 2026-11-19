@@ -53,7 +53,10 @@ SCENARIOS = {
         },
         "perfil": Perfil(rated_rpm=1800, coolant_set=93, hyd_set=90.5, oil_p_rated=215, boost_max=165, fuel_idle=3.4,
                           fuel_max=24, ambient=8.5, start_coolant=66, start_hyd=78.2, start_oil=70, tank_l=410,
-                          fuel_level=63.8, def_level=41.2, load_mean=0.62, seed=320),
+                          fuel_level=63.8, def_level=41.2, load_mean=0.62, seed=320,
+                          relief_p1=344.0, relief_p2=304.0, pilot_bar=40.6),   # bomba 2 gastada
+        # Presiones de bomba en un mensaje propio (formato inventado del simulador, no el de Cat)
+        "presiones": {"pgn": 0xFF2A, "sa": 0xE6},
     },
     "fuchs": {
         "placa": {"make": "Fuchs", "model": "MHL350", "serial": "SIM-MHL-03521", "year": 2019, "hours": 7341},
@@ -169,6 +172,14 @@ class SimulatedMachine:
                     self._send(j1939.PGN_AT1T1, 0x3D, bytes([int(v["def_level_pct"] / 0.4)]))
                 for sa in self.sc["ecus"]:
                     self._send(j1939.PGN_DM1, sa, self._dm(sa, "dm1"))
+                pr = self.sc.get("presiones")
+                if pr:   # mensaje "señuelo" del fabricante: caudal %, temperatura interna y contador
+                    self._send(0xFF10, pr["sa"], _u(v["torque_pct"] * 10, 2) + _u((v["hyd_oil_temp_c"] + 40) * 10, 2)
+                               + bytes([tick // 10 % 256]))
+            pr = self.sc.get("presiones")
+            if pr and "pump1_bar" in v:
+                self._send(pr["pgn"], pr["sa"], _u(v["pump1_bar"] * 10, 2) + _u(v["pump2_bar"] * 10, 2)
+                           + _u(v["pilot_bar"] * 10, 2) + bytes([tick % 256]))
             tick += 1
             time.sleep(0.1)
 
@@ -215,6 +226,10 @@ class SimulatedMachine:
             targets = self.sc["ecus"] if jid.destination == 0xFF else [jid.destination]
             for sa in targets:
                 self._respond(pgn, sa)
+
+    def set_operator(self, action: str | None) -> None:
+        """Simula lo que hace el operador en una prueba guiada (p. ej. 'alivio_p1')."""
+        self.motor.operator = action
 
     def start(self):
         for t in self._threads:

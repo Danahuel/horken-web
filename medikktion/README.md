@@ -190,6 +190,24 @@ No hace falta instalar Flutter: **GitHub compila el APK solo** en cada cambio
 El mismo APK vale para cualquier proyecto Firebase: se configura pegando el código `MDK1:...`.
 Para Google Play (prueba interna): `flutter build appbundle` con una clave de subida propia.
 
+## Prueba de bombas hidráulicas
+
+Prueba guiada (reposo, alivio de cada bomba, pilotaje) con veredicto por bomba, causa probable, pasos y
+coste, en la app, la estación y el PDF. Las presiones salen de dos sitios:
+
+- **Centralita**: si la máquina emite las presiones de bomba en sus mensajes propios y hay perfil en
+  `portatil/medikktion/kb/presiones/`. Ningún fabricante publica esos mensajes, así que el perfil se aprende:
+  - **Solo**: al hacer la prueba con manómetro, se graba el bus y se buscan los bytes que coinciden con lo
+    que marcó la aguja. Si coinciden (error < 3 %), se guarda el perfil para ESA máquina (por nº de serie).
+  - **A mano** con una grabación: `python -m medikktion buscar-presiones grabacion.blf --alivio 343
+    --pilotaje 40 [--sesion sesion.json] --marca caterpillar --modelo 320 --guardar cat_320`.
+  El perfil incluido (`simulador_cat320.json`) es solo del simulador.
+- **Manómetro de taller**: el mecánico escribe lo que marca. Funciona en cualquier máquina.
+
+Valores de referencia: los del manual (se escriben al empezar). Sin ellos se usan valores orientativos por
+clase de máquina y el informe lo indica. La presión dice si bombas y válvulas aguantan; el caudal
+(rapidez) se ve con tiempos de ciclo o caudalímetro.
+
 ## Seguridad: solo lectura, con candado
 
 El programa **solo pregunta**; no puede cambiar nada en la máquina. Cada trama que sale del

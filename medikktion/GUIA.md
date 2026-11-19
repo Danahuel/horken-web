@@ -131,6 +131,26 @@ Si algo no sale bien, mándame ese archivo: reproduzco la máquina tal cual y lo
 Para verla tú mismo otra vez: `diagnostico.bat` → opción **7 (Reproducir una grabación)**.
 Las grabaciones se borran solas a los 90 días o si pasan de 2 GB.
 
+### Prueba de bombas hidráulicas
+
+Con una lectura en marcha, baje en la ventana del portátil hasta **Prueba de bombas**.
+
+1. Escriba la **presión de alivio** y la de **pilotaje** del manual de esa máquina (si no, usa un valor
+   orientativo y el informe lo dice).
+2. Siga los 4 pasos en pantalla: reposo, alivio de la bomba 1, alivio de la bomba 2 y pilotaje. Cada paso
+   dice qué mando accionar y cuánto tiempo.
+3. En cada paso:
+   - Si la máquina **envía las presiones por la centralita**, pulse **Capturar de la centralita**.
+   - Si no, pinche el **manómetro de taller (0-600 bar)** en la toma de prueba de esa bomba y escriba lo que marca.
+4. Al terminar sale el veredicto por bomba, el coste de reparación y todo va a la app y al PDF.
+
+Mientras se hace la prueba con manómetro, el programa **graba el bus**. Al terminar compara lo que escribió
+con lo que circulaba por el cable: si encuentra las presiones en algún mensaje de la centralita (error menor del 3 %),
+guarda el perfil de esa máquina y **la próxima vez las muestra en vivo sin manómetro**.
+
+Seguridad: zona despejada, implemento apoyado al pinchar el manómetro, aceite caliente (más de 45 °C) y
+cada mando a tope solo 3-5 s.
+
 ### Si se corta internet durante una lectura
 
 No pasa nada, sigue trabajando:

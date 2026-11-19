@@ -81,7 +81,7 @@ class _Signal {
 }
 
 const _thermal = {'coolant_c', 'oil_temp_c', 'hyd_oil_temp_c', 'trans_oil_temp_c', 'intake_temp_c', 'ambient_c', 'fuel_temp_c'};
-const _cyclic = {'rpm', 'boost_kpa', 'fuel_rate_lh', 'torque_pct'};
+const _cyclic = {'rpm', 'boost_kpa', 'fuel_rate_lh', 'torque_pct', 'pump1_bar', 'pump2_bar'};
 
 class DemoRepository implements SessionRepository {
   static const names = ['cat320', 'fuchs', 'arjes', 'hamm'];

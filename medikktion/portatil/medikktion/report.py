@@ -41,7 +41,7 @@ DANGER = colors.HexColor("#C63A31")
 SEV = {1: INK3, 2: INK2, 3: WARN, 4: colors.HexColor("#D0682C"), 5: DANGER}
 SEV_TXT = {1: "Informativa", 2: "Leve", 3: "Moderada", 4: "Grave", 5: "Crítica"}
 KIND_TXT = {"active": "ACTIVA", "emissions": "ACTIVA (EMISIONES)", "pending": "PENDIENTE", "permanent": "PERMANENTE",
-            "emissions_prev": "EMISIONES ANTERIOR", "history": "HISTÓRICA"}
+            "emissions_prev": "EMISIONES ANTERIOR", "history": "HISTÓRICA", "prueba": "PRUEBA DE BOMBAS"}
 VERDICT = {"ok": OK, "sospechoso": WARN, "manipulado": DANGER, "sin_datos": INK3}
 _LANG = "es"
 
@@ -329,6 +329,40 @@ def build_pdf(snapshot: dict, path: str | Path, lang: str = "es") -> Path:
         mt.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("LEFTPADDING", (0, 0), (-1, -1), 0),
                                 ("TOPPADDING", (0, 0), (-1, -1), 3)]))
         el.append(mt)
+
+    # Prueba de bombas
+    pt = snapshot.get("pump_test") or {}
+    res = pt.get("result") or {}
+    if res.get("checks"):
+        el.append(_section("Prueba de bombas hidráulicas"))
+        col = {"ok": OK, "justa": WARN, "mal": DANGER}.get(res["verdict"], INK3)
+        el.append(Paragraph(f"<font color='{col.hexval()}'>{_t(res['label'])}</font>",
+                            ParagraphStyle("pv", fontName=F_MED, fontSize=12, leading=15)))
+        el.append(Spacer(1, 4))
+        st_txt = {"ok": "Bien", "justa": "Justa", "baja": "Baja", "alta": "Alta"}
+        st_col = {"ok": "#23855D", "justa": "#B3741A", "baja": "#C63A31", "alta": "#C63A31"}
+        rows = [[Paragraph(_spaced(_t(x)), S_LABEL) for x in ("Paso", "Canal", "Lectura", "Referencia", "Estado", "Fuente")]]
+        for c in res["checks"]:
+            ref = f"{c['range'][0]}-{c['range'][1]} bar" if c.get("range") else f"{_n(c.get('nominal'), 0)} bar"
+            if c.get("deviation_pct") is not None:
+                ref += f" ({c['deviation_pct']:+.0f} %)"
+            rows.append([Paragraph(_t(c["title"]), S_SMALL), Paragraph(_t(c["label"]), S_SMALL),
+                         Paragraph(f"{_n(c['value'], 1 if c['channel'] == 'pilot_bar' else 0)} bar", S_SMALL),
+                         Paragraph(ref, S_SMALL),
+                         Paragraph(f"<font color='{st_col.get(c['status'], '#4C5159')}'>{_t(st_txt.get(c['status'], c['status']))}</font>", S_SMALL),
+                         Paragraph(_t({"centralita": "centralita", "manometro": "manómetro"}.get(c["source"], c["source"])), S_SMALL)])
+        pt_t = Table(rows, colWidths=[52 * mm, 24 * mm, 24 * mm, 36 * mm, 18 * mm, 22 * mm], repeatRows=1)
+        pt_t.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                  ("TOPPADDING", (0, 0), (-1, -1), 3)]))
+        el.append(pt_t)
+        notes = [res["comparison"]["text"]] if res.get("comparison") else []
+        notes.append(res.get("note", ""))
+        notes.append("Referencias del manual de la máquina." if pt.get("spec_source") == "manual"
+                     else f"Referencias orientativas ({pt.get('spec_note', '')}): confirmar con el manual de la máquina.")
+        el.append(Spacer(1, 4))
+        el.append(Paragraph(_t(" ".join(n for n in notes if n)), S_SMALL))
+        if res.get("faults"):
+            el.append(Paragraph(_t("Lo que sale de la prueba aparece en Averías con su procedimiento y coste."), S_SMALL))
 
     # Averías
     el.append(_section("Averías"))

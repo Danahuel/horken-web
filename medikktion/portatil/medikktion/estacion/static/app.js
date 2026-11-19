@@ -27,10 +27,13 @@ const MEASURES = {
   fuel_level_pct: ["Combustible", "%", 1, 1, 0, 100, 12, null],
   def_level_pct: ["AdBlue", "%", 1, 1, 0, 100, 12, null],
   torque_pct: ["Par motor", "%", 1, 0, 0, 100, null, null],
+  pump1_bar: ["Presión bomba 1", "bar", 1, 0, 0, 420, null, null],
+  pump2_bar: ["Presión bomba 2", "bar", 1, 0, 0, 420, null, null],
+  pilot_bar: ["Presión de pilotaje", "bar", 1, 1, 0, 60, null, null],
 };
 
 const KIND = { active: "activa", emissions: "activa · emisiones", pending: "pendiente", permanent: "permanente",
-  emissions_prev: "emisiones anterior", history: "histórica" };
+  emissions_prev: "emisiones anterior", history: "histórica", prueba: "prueba de bombas" };
 let S = null;               // último estado del servidor
 let mode = "maquina";
 let firstLoad = true;
@@ -322,6 +325,7 @@ function renderReading(s) {
   $("#rec-sw").setAttribute("aria-pressed", rec.active ? "true" : "false");
   $("#rec-d").textContent = rec.active ? `${rec.file} · ${num(rec.frames, 0)} tramas · ${num(rec.mb, 2)} MB`
     : (rec.file ? `Última: ${rec.file}` : "Guarda todo lo que circula por el bus (BLF)");
+  renderPump(s);
   const mt = $("#mail-to");
   if (!mt.value && S.recipients.length && document.activeElement !== mt) mt.value = S.recipients.join(", ");
 }
@@ -346,6 +350,7 @@ function readingSkeleton() {
       <div><div class="sec-title">AVERÍAS</div><div id="faults"></div>
         <div class="sec-title evid">HORÓMETRO Y PROCEDENCIA</div><div id="evid"></div></div>
     </div>
+    <div class="sec-title" style="margin-top:28px">PRUEBA DE BOMBAS</div><div id="pump" class="pump"></div>
     <div class="actions">
       <div class="act-rec"><div><div class="t">Grabación de tramas</div><div class="d" id="rec-d"></div></div>
         <button type="button" class="sw" id="rec-sw" aria-pressed="false"><i></i></button></div>
@@ -398,3 +403,127 @@ $("#btn-folder").onclick = () => api("/api/abrir", { que: "sesiones" });
 
 poll();
 requestAnimationFrame(tick);
+
+// ─────────────────────────────────────────── prueba de bombas
+const CH = { pump1_bar: "Bomba 1", pump2_bar: "Bomba 2", pilot_bar: "Pilotaje" };
+const ST = { ok: ["Bien", "t-ok"], justa: ["Justa", "t-warn"], baja: ["Baja", "t-bad"], alta: ["Alta", "t-bad"] };
+const SRC = { centralita: "centralita", manometro: "manómetro" };
+
+function pumpSig(s) {
+  const t = s.pump_test;
+  return JSON.stringify([!!t, t && t.index, t && t.finished, t && t.steps.map((x) => x.readings), s.pressures?.available]);
+}
+
+function renderPump(s) {
+  const box = $("#pump");
+  const t = s.pump_test;
+  const avail = !!(s.pressures && s.pressures.available);
+  if (box.dataset.sig !== pumpSig(s)) {
+    box.dataset.sig = pumpSig(s);
+    box.innerHTML = !t ? pumpStart(s, avail) : t.finished ? pumpResult(t) : pumpStep(t, avail);
+    wirePump(s);
+  }
+  // valores en vivo dentro del paso
+  $$("[data-pv]", box).forEach((el) => {
+    const p = s.live[el.dataset.pv];
+    el.textContent = p ? num(p.value, el.dataset.pv === "pilot_bar" ? 1 : 0) : "—";
+  });
+}
+
+function pumpStart(s, avail) {
+  const spec = (s.pump_specs || {})[s.machine_class] || { alivio: 300, pilotaje: 35, nota: "Sin clase de máquina: escriba los valores del manual" };
+  return `
+    <p class="pump-intro">Prueba guiada: presión de reposo, alivio de cada bomba y pilotaje. Compara cada lectura con el
+      valor del manual y da un veredicto por bomba con su coste.</p>
+    <p class="pump-src ${avail ? "t-ok" : "t-warn"}">${avail
+      ? "Esta máquina envía las presiones de bomba por la centralita: se leen solas."
+      : "Esta máquina no envía las presiones de bomba (o aún no tenemos su perfil): pinche el manómetro en la toma de prueba y escriba lo que marca. Mientras tanto se graba el bus por si la centralita las emite."}</p>
+    <div class="pump-spec">
+      <label>Alivio según manual (bar)<input id="p-alivio" inputmode="decimal" placeholder="${spec.alivio} (orientativo)"></label>
+      <label>Pilotaje según manual (bar)<input id="p-pilot" inputmode="decimal" placeholder="${spec.pilotaje} (orientativo)"></label>
+      <button class="pump-go" id="p-start">Empezar prueba de bombas</button>
+    </div>
+    <p class="pump-note">${esc(spec.nota)}. Sin valor del manual se usa el orientativo y el informe lo indica.</p>`;
+}
+
+function pumpStep(t, avail) {
+  const st = t.steps[t.index];
+  const last = t.index === t.steps.length - 1;
+  return `
+    <ol class="pump-steps">${t.steps.map((x, i) => {
+      const done = Object.keys(x.readings || {}).length;
+      return `<li class="${i === t.index ? "on" : done ? "done" : ""}"><span>${i + 1}</span>${esc(x.title)}</li>`;
+    }).join("")}</ol>
+    ${t.index === 0 ? `<details class="pump-safety" open><summary>Seguridad antes de empezar</summary><ul>${t.safety.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
+    <div class="pump-card">
+      <div class="pump-title">${t.index + 1}. ${esc(st.title)}</div>
+      <p class="pump-instr">${esc(st.instruction)}</p>
+      <p class="pump-ref">Referencia: ${st.range ? `${st.range[0]}-${st.range[1]} bar` : `${num(st.nominal, 0)} bar`}
+        ${t.spec_source === "manual" ? "(manual)" : "(orientativo)"}</p>
+      <div class="pump-ch">${st.channels.map((ch) => {
+        const r = (st.readings || {})[ch];
+        return `<div class="pch">
+          <span class="k">${CH[ch]}</span>
+          <span class="live"><em data-pv="${ch}">—</em><small>bar en vivo</small></span>
+          <span class="got">${r ? `<b>${num(r.value, ch === "pilot_bar" ? 1 : 0)} bar</b> · ${SRC[r.source]}` : "sin lectura"}</span>
+          <input data-man="${ch}" inputmode="decimal" placeholder="manómetro (bar)">
+        </div>`;
+      }).join("")}</div>
+      <div class="pump-btns">
+        <button class="ghost" id="p-prev" ${t.index === 0 ? "disabled" : ""}>Anterior</button>
+        ${avail ? `<button class="ghost" id="p-cap">Capturar de la centralita</button>` : ""}
+        <button class="ghost" id="p-man">Guardar manómetro</button>
+        <button class="pump-go" id="p-next">${last ? "Terminar prueba" : "Siguiente paso"}</button>
+      </div>
+      <a class="pump-cancel" id="p-cancel">Cancelar prueba</a>
+    </div>`;
+}
+
+function pumpResult(t) {
+  const r = t.result;
+  const col = { ok: "var(--green)", justa: "var(--amber)", mal: "var(--red)" }[r.verdict] || "var(--text3)";
+  return `
+    <div class="pump-verdict" style="color:${col}">${esc(r.label)}</div>
+    <table class="book pump-table"><thead><tr><th>Paso</th><th>Canal</th><th>Lectura</th><th>Referencia</th><th>Estado</th><th>Fuente</th></tr></thead>
+    <tbody>${r.checks.map((c) => {
+      const [txt, cls] = ST[c.status] || ["—", "t-dim"];
+      return `<tr><td>${esc(c.title)}</td><td>${esc(c.label)}</td><td class="num">${num(c.value, c.channel === "pilot_bar" ? 1 : 0)} bar</td>
+        <td class="num">${c.range ? c.range.join("-") : num(c.nominal, 0)} bar${c.deviation_pct != null ? ` <span class="t-dim">(${c.deviation_pct > 0 ? "+" : ""}${num(c.deviation_pct, 0)} %)</span>` : ""}</td>
+        <td class="${cls}">${txt}</td><td class="t-dim">${SRC[c.source] || c.source}</td></tr>`;
+    }).join("")}</tbody></table>
+    ${r.comparison ? `<p class="pump-note">${esc(r.comparison.text)}</p>` : ""}
+    ${r.faults.map((f) => `<div class="fault"><div class="s" style="background:${sevColor(f.severity, true)}"></div>
+      <div><div class="c">${esc(f.code)} · prueba de bombas</div><div class="n">${esc(f.name)}</div><div class="f">${esc(f.fmi_text)}</div>
+      <div class="f" style="margin-top:6px">${f.steps.map((x, i) => `${i + 1}. ${esc(x)}`).join("<br>")}</div></div>
+      <div class="e">alt. ${num(f.cost_min_eur, 0)} €<br>orig. ${num(f.cost_max_eur, 0)} €<br><span style="color:var(--text3)">dif. ${f.difficulty}/5</span></div></div>`).join("")}
+    <p class="pump-note">${esc(r.note)} ${t.spec_source === "manual" ? "" : "Referencias orientativas: confirmar con el manual de la máquina."}</p>
+    <div class="pump-btns"><button class="ghost" id="p-again">Repetir prueba</button></div>`;
+}
+
+function wirePump(s) {
+  const act = async (accion, extra = {}) => {
+    const r = await api("/api/bombas", { accion, ...extra });
+    if (!r.ok) note(r.error || "No se pudo.");
+    else if (accion === "capturar" && r.captured && !Object.keys(r.captured).length)
+      note("La centralita no ha enviado presiones en los últimos segundos: escriba el valor del manómetro.");
+  };
+  const n = (v) => parseFloat(String(v || "").replace(",", ".")) || null;
+  const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+  on("#p-start", () => act("iniciar", { alivio: n($("#p-alivio").value), pilotaje: n($("#p-pilot").value) }));
+  on("#p-again", () => act("iniciar", {}));
+  on("#p-prev", () => act("anterior"));
+  on("#p-cap", () => act("capturar"));
+  const saveManual = async () => {
+    const valores = {};
+    $$("[data-man]").forEach((el) => { if (n(el.value) != null) valores[el.dataset.man] = n(el.value); });
+    if (Object.keys(valores).length) await act("manual", { valores });
+    return Object.keys(valores).length;
+  };
+  on("#p-man", saveManual);
+  on("#p-next", async () => {
+    await saveManual();
+    const last = s.pump_test && s.pump_test.index === s.pump_test.steps.length - 1;
+    act(last ? "terminar" : "siguiente");
+  });
+  on("#p-cancel", () => act("cancelar"));
+}

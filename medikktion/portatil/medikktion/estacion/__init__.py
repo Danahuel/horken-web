@@ -28,7 +28,7 @@ from pathlib import Path
 import can
 
 from .. import __main__ as cli
-from .. import analysis, simulator
+from .. import analysis, hidraulica, simulator
 
 log = logging.getLogger("medikktion.estacion")
 STATIC = Path(__file__).parent / "static"
@@ -273,6 +273,14 @@ class Controller:
         threading.Thread(target=self.hooks["report"], args=(to, lang), daemon=True).start()
         return {"ok": True}
 
+    def pump(self, p: dict) -> dict:
+        if "pump" not in self.hooks:
+            return {"ok": False, "error": "Empiece una lectura antes de la prueba de bombas."}
+        try:
+            return {"ok": True, **(self.hooks["pump"](p.get("accion", ""), p) or {})}
+        except ValueError as e:
+            return {"ok": False, "error": str(e)}
+
     def check(self) -> dict:
         from ..setup_wizard import check
         buf = io.StringIO()
@@ -317,6 +325,10 @@ def _slim(snap: dict | None) -> dict | None:
         "ecus": [{k: e.get(k) for k in ("address_hex", "name", "protocol", "engine_hours", "active_dtcs")}
                  for e in snap.get("ecus", [])],
         "location": snap.get("location"),
+        "pump_test": snap.get("pump_test"), "pressures": snap.get("pressures", {}),
+        "pump_specs": {k: {"alivio": v["alivio"], "pilotaje": v["pilotaje"], "nota": v["nota"]}
+                       for k, v in hidraulica.SPECS.items()},
+        "machine_class": snap.get("machine", {}).get("machine_class"),
     }
 
 
@@ -371,6 +383,7 @@ def make_handler(ctl: Controller):
                 "/api/grabar": lambda: ctl.record(bool(p.get("activo"))),
                 "/api/informe": lambda: ctl.report(p.get("destinatarios") or [], p.get("idioma") or "es"),
                 "/api/comprobar": ctl.check,
+                "/api/bombas": lambda: ctl.pump(p),
                 "/api/abrir": lambda: ctl.open_path(p.get("que", "sesiones"), p.get("nombre", "")),
             }
             if path not in routes:

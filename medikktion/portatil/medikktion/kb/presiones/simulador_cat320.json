@@ -1,0 +1,12 @@
+{
+  "_nota": "Perfil del SIMULADOR (formato inventado para las pruebas). Solo se aplica a máquinas cuyo nº de serie empieza por SIM. No vale para una Caterpillar real: el de una máquina real se saca de una grabación con 'python -m medikktion buscar-presiones'.",
+  "marca": "caterpillar",
+  "modelos": ["320"],
+  "solo_serie_prefijo": "SIM",
+  "verificado": "simulador",
+  "senales": {
+    "pump1_bar": {"pgn": 65322, "sa": 230, "byte": 0, "len": 2, "orden": "little", "escala": 0.1},
+    "pump2_bar": {"pgn": 65322, "sa": 230, "byte": 2, "len": 2, "orden": "little", "escala": 0.1},
+    "pilot_bar": {"pgn": 65322, "sa": 230, "byte": 4, "len": 2, "orden": "little", "escala": 0.1}
+  }
+}

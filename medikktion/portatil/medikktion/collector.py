@@ -9,7 +9,9 @@ from datetime import datetime, timezone
 
 import can
 
-from . import analysis, j1939, kb, seguridad
+from collections import deque
+
+from . import analysis, hidraulica, j1939, kb, seguridad
 
 log = logging.getLogger("medikktion.collector")
 
@@ -45,6 +47,13 @@ class MachineState:
         self.lock = threading.Lock()
         self.tp = j1939.TransportReassembler()
         self.dbc = dbc                  # DBC opcional (cantools) para mensajes del fabricante
+        # Presiones hidráulicas por CAN (perfiles por máquina) y prueba de bombas guiada
+        self.pressure_profiles = hidraulica.load_profiles()
+        self.pressure_log: dict[str, deque] = {ch: deque(maxlen=900) for ch in hidraulica.CHANNELS}
+        self._pressure_map: dict[tuple, list] = {}
+        self._pressure_map_at = 0.0
+        self.pressure_profile: str | None = None
+        self.pump_test: hidraulica.PumpTest | None = None
 
     @property
     def labour_rate(self):
@@ -94,8 +103,73 @@ class MachineState:
         elif pgn in j1939.PGN_DECODERS:
             self.set_values(sa, j1939.decode_params(pgn, data))
         elif pgn not in (j1939.PGN_REQUEST, j1939.PGN_ADDRESS_CLAIM):
+            if (pgn >= 0xFF00 or pgn == 0xEF00) and self._try_pressure(pgn, sa, data):
+                return
             if not self._try_dbc(pgn, sa, data):
                 self.unknown_pgns[pgn] = self.unknown_pgns.get(pgn, 0) + 1
+
+    def _pressure_signals(self) -> dict[tuple, list]:
+        """Qué mensajes propios llevan presiones en ESTA máquina (según marca, modelo y serie)."""
+        now = time.time()
+        if now - self._pressure_map_at < 2 and self._pressure_map_at:
+            return self._pressure_map
+        self._pressure_map_at = now
+        info = self.machine_info()
+        m: dict[tuple, list] = {}
+        self.pressure_profile = None
+        for p in self.pressure_profiles:
+            if hidraulica.profile_applies(p, info["brand_key"], info.get("model", ""), info.get("serial", "")):
+                for ch, sig in p.get("senales", {}).items():
+                    m.setdefault((sig["pgn"], sig["sa"]), []).append((ch, sig))
+                self.pressure_profile = p["_file"]
+                break
+        self._pressure_map = m
+        return m
+
+    def _try_pressure(self, pgn: int, sa: int, data: bytes) -> bool:
+        sigs = self._pressure_signals().get((pgn, sa))
+        if not sigs:
+            return False
+        now = time.time()
+        for ch, sig in sigs:
+            v = hidraulica.decode_signal(sig, data)
+            if v is None:
+                continue
+            self.live[ch] = {"value": round(v, 1), "unit": "bar", "label": f"Presión {hidraulica.CHANNELS[ch].lower()}",
+                             "source": sa, "t": now}
+            self.pressure_log[ch].append((now, v))
+        return True
+
+    # ----------------------------------------------------- prueba de bombas
+    def start_pump_test(self, alivio=None, pilotaje=None, on_step=None) -> dict:
+        with self.lock:
+            self.pump_test = hidraulica.PumpTest(self.machine_class, alivio, pilotaje, on_step)
+            return self.pump_test.to_dict(self.pricing)
+
+    def pump_action(self, action: str, values: dict | None = None) -> dict:
+        """capturar | manual | siguiente | anterior | terminar | cancelar."""
+        with self.lock:
+            pt = self.pump_test
+            if pt is None:
+                raise ValueError("No hay ninguna prueba de bombas en marcha.")
+            info = {}
+            if action == "capturar":
+                info = pt.capture({k: list(v) for k, v in self.pressure_log.items()})
+            elif action == "manual":
+                for ch, v in (values or {}).items():
+                    if ch in hidraulica.CHANNELS and v not in (None, ""):
+                        info[ch] = pt.manual(ch, float(str(v).replace(",", ".")))
+            elif action == "siguiente":
+                pt.go(+1)
+            elif action == "anterior":
+                pt.go(-1)
+            elif action == "terminar":
+                pt.finish()
+            elif action == "cancelar":
+                pt.finish()
+                self.pump_test = None
+                return {"cancelled": True}
+            return {"captured": info, "test": pt.to_dict(self.pricing)}
 
     def _try_dbc(self, pgn: int, sa: int, data: bytes) -> bool:
         if not self.dbc:
@@ -141,7 +215,7 @@ class MachineState:
             self.extra_dtcs[key] = dtcs
 
     TREND_KEYS = ("rpm", "coolant_c", "hyd_oil_temp_c", "oil_temp_c", "oil_pressure_kpa", "boost_kpa",
-                  "fuel_rate_lh", "battery_v", "trans_oil_temp_c")
+                  "fuel_rate_lh", "battery_v", "trans_oil_temp_c", "pump1_bar", "pump2_bar")
 
     def record_trend(self, every: float = 5.0, keep: int = 180) -> None:
         """Guarda una muestra cada ``every`` s (15 min con los valores por defecto)."""
@@ -215,13 +289,16 @@ class MachineState:
                             e["freeze"] = {k: v for k, v in fr.items() if k not in ("spn", "fmi")}
                         merged[key] = e
             dtcs.extend(merged.values())
+            pump = self.pump_test.to_dict(self.pricing) if self.pump_test else None
+            if pump:
+                dtcs.extend(pump["result"]["faults"])     # lo que sale de la prueba cuenta como avería con coste
             permanent_cleared = [d for d in merged.values() if d["kind"] == "permanent"]
             for key, codes in self.extra_dtcs.items():
                 for d in codes:
                     dtcs.append({**d, "source": str(key)})
                     if d.get("active") and d.get("mil"):
                         lamps_all["mil"] = True
-            order = {"active": 0, "emissions": 0, "pending": 1, "permanent": 2, "emissions_prev": 3, "history": 4}
+            order = {"active": 0, "prueba": 0, "emissions": 0, "pending": 1, "permanent": 2, "emissions_prev": 3, "history": 4}
             dtcs.sort(key=lambda d: (order.get(d.get("kind"), 0 if d["active"] else 4), -d["severity"], str(d["code"])))
             ecus = {sa: dict(e) for sa, e in self.ecus.items() if sa not in (0xF9, 0xFA)}
             usage, plate_ev, plate_mods = analysis.cross_checks(ecus, self.plate)
@@ -281,6 +358,9 @@ class MachineState:
                 "dtcs": dtcs, "ecus": ecu_list,
                 "live": {k: {kk: vv for kk, vv in v.items() if kk != "t"} for k, v in self.live.items()},
                 "tamper": tamper, "modifications": mods,
+                "pump_test": pump,
+                "pressures": {"available": any(self.pressure_log[c] for c in self.pressure_log),
+                              "profile": self.pressure_profile},
                 "unknown_pgns": [{"pgn": p, "count": c} for p, c in sorted(self.unknown_pgns.items())][:50],
             }
 
