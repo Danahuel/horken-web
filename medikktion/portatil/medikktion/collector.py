@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 import can
 
-from . import analysis, j1939, kb
+from . import analysis, j1939, kb, seguridad
 
 log = logging.getLogger("medikktion.collector")
 
@@ -305,7 +305,8 @@ class DiagnosticSession:
     """
 
     def __init__(self, bus: can.BusABC, state: MachineState, tool_address: int = 0xF9):
-        self.bus, self.state, self.addr = bus, state, tool_address
+        # Candado de solo lectura: nada que no sea una pregunta sale al bus
+        self.bus, self.state, self.addr = seguridad.guard(bus), state, tool_address
         self.state.tp.send = self._send
         self.state.tp.our_address = tool_address
         self.notifier: can.Notifier | None = None
@@ -329,10 +330,6 @@ class DiagnosticSession:
             for pgn in (j1939.PGN_HOURS, j1939.PGN_SOFTWARE_ID, j1939.PGN_COMPONENT_ID, j1939.PGN_DM19):
                 self._send(*j1939.build_request(pgn, self.addr, sa))
                 time.sleep(pause)
-
-    def clear_active_codes(self):
-        """DM11: borra averías activas (solo si el usuario lo pide desde la app)."""
-        self._send(*j1939.build_request(j1939.PGN_DM11, self.addr, 0xFF))
 
     def stop(self):
         if self.notifier:

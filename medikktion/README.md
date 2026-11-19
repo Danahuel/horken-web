@@ -190,6 +190,17 @@ No hace falta instalar Flutter: **GitHub compila el APK solo** en cada cambio
 El mismo APK vale para cualquier proyecto Firebase: se configura pegando el código `MDK1:...`.
 Para Google Play (prueba interna): `flutter build appbundle` con una clave de subida propia.
 
+## Seguridad: solo lectura, con candado
+
+El programa **solo pregunta**; no puede cambiar nada en la máquina. Cada trama que sale del
+portátil pasa por `portatil/medikktion/seguridad.py`, que únicamente deja salir:
+peticiones de lectura J1939 (de una lista fija), las confirmaciones necesarias para recibir
+mensajes largos, y en UDS solo "¿estás ahí?" (0x3E), leer averías (0x19) y leer datos (0x22).
+Borrar averías (DM3/DM11/UDS 0x14), escribir, rutinas, cambio de sesión, acceso de seguridad,
+reinicio, programación, DM13 (callar el bus) y DM14 (memoria) se **bloquean** antes de llegar al cable.
+Las pruebas `tests/test_seguridad.py` espían cada trama de una lectura completa y fallan si sale
+algo que no sea una pregunta.
+
 ## Qué hace y qué no (honestamente)
 
 - **Averías de todas las centralitas** que hablan J1939: motor, postratamiento, transmisión, cuadro y controladores del fabricante (DM1 activas, DM2 históricas).
