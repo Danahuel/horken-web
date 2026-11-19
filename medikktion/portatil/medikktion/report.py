@@ -47,10 +47,10 @@ _LANG = "es"
 
 
 def _t(text: str) -> str:
-    """Traduce al alemán si el informe se pide en alemán."""
-    if _LANG != "de" or not text:
+    """Traduce al inglés si el informe se pide en inglés."""
+    if _LANG != "en" or not text:
         return text
-    from .report_de import tr
+    from .report_en import tr
     return tr(text)
 
 S_BODY = ParagraphStyle("b", fontName=F_REG, fontSize=8.8, leading=12.6, textColor=INK)
@@ -111,7 +111,7 @@ def _trend_chart(tr: dict, label: str, unit: str, factor: float = 1.0, decimals:
     d.add(PolyLine([c for i in range(len(v)) for c in (X(t[i]), Y(v[i]))], strokeColor=GOLD, strokeWidth=1.0))
     mins = round((t[-1] - t[0]) / 60)
     d.add(String(left, 0, f"−{mins} min", fontName=F_REG, fontSize=5.4, fillColor=INK3))
-    d.add(String(right - 14, 0, "jetzt" if _LANG == "de" else "ahora", fontName=F_REG, fontSize=5.4, fillColor=INK3))
+    d.add(String(right - 14, 0, "now" if _LANG == "en" else "ahora", fontName=F_REG, fontSize=5.4, fillColor=INK3))
     d.add(String(right - 60, h - 6, f"{_n(v[-1], decimals)} {unit}", fontName=F_MED, fontSize=7, fillColor=INK))
     return d
 
@@ -158,7 +158,7 @@ def _header(canvas, doc, snapshot):
 
 def build_pdf(snapshot: dict, path: str | Path, lang: str = "es") -> Path:
     global _LANG
-    _LANG = "de" if (lang or "").lower().startswith("de") else "es"
+    _LANG = "en" if (lang or "").lower().startswith("en") else "es"
     path = Path(path)
     m, s, t = snapshot["machine"], snapshot["summary"], snapshot["tamper"]
     h = _health(snapshot)
@@ -172,15 +172,15 @@ def build_pdf(snapshot: dict, path: str | Path, lang: str = "es") -> Path:
          Spacer(1, 3),
          Paragraph(m.get("model") or "", ParagraphStyle("md", fontName=F_LIGHT, fontSize=26, leading=30, textColor=INK)),
          Spacer(1, 4),
-         Paragraph(f"{m.get('machine_class_label', '')} · {_t('nº de serie')} {m.get('serial') or '—'}", S_SMALL),
+         Paragraph(f"{_t(m.get('machine_class_label', ''))} · {_t('nº de serie')} {m.get('serial') or '—'}", S_SMALL),
          Paragraph(f"{snapshot.get('location') or ''} · {when} UTC"
-                   + (f" · {snapshot.get('operator')}" if snapshot.get("operator") else ""), S_SMALL)],
+                   + (f" · {_t(snapshot.get('operator'))}" if snapshot.get("operator") else ""), S_SMALL)],
         [Paragraph(_spaced("Índice de estado"), S_LABEL), Spacer(1, 2),
          Paragraph(str(h["score"]), ParagraphStyle("hs", fontName=F_LIGHT, fontSize=34, leading=38,
                                                    textColor={True: OK}.get(h["score"] >= 85,
                                                    GOLD if h["score"] >= 65 else WARN if h["score"] >= 40 else DANGER))),
-         Paragraph(_spaced({"Óptimo": "Optimal", "Aceptable": "Akzeptabel", "Requiere atención": "Prüfung nötig",
-                            "Crítico": "Kritisch"}.get(h["label"], h["label"]) if _LANG == "de" else h["label"]), ParagraphStyle("hl", fontName=F_SEMI, fontSize=6.6, textColor=INK2))],
+         Paragraph(_spaced({"Óptimo": "Optimal", "Aceptable": "Acceptable", "Requiere atención": "Needs attention",
+                            "Crítico": "Critical"}.get(h["label"], h["label"]) if _LANG == "en" else h["label"]), ParagraphStyle("hl", fontName=F_SEMI, fontSize=6.6, textColor=INK2))],
     ]], colWidths=[128 * mm, 48 * mm])
     head.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0),
                               ("LINEBEFORE", (1, 0), (1, 0), 0.6, LINE), ("LEFTPADDING", (1, 0), (1, 0), 12)]))
@@ -246,7 +246,7 @@ def build_pdf(snapshot: dict, path: str | Path, lang: str = "es") -> Path:
     el.append(Spacer(1, 6))
     for e in t["evidence"]:
         mark = "<font color='#23855D'>✓</font>" if e["level"] == "ok" else "<font color='#C63A31'>!</font>"
-        el.append(Paragraph(f"{mark}&nbsp;&nbsp;<font name='{F_MED}'>{_t(e['title'])}</font> — {e['detail']}", S_BODY))
+        el.append(Paragraph(f"{mark}&nbsp;&nbsp;<font name='{F_MED}'>{_t(e['title'])}</font> — {_t(e['detail'])}", S_BODY))
         el.append(Spacer(1, 3))
     u = snapshot.get("usage") or {}
     pl = (snapshot.get("machine") or {}).get("plate") or {}
@@ -261,7 +261,8 @@ def build_pdf(snapshot: dict, path: str | Path, lang: str = "es") -> Path:
     if u.get("hours_per_year") is not None:
         rows.append(("Uso anual", f"{_n(u['hours_per_year'], 0)} h/año"))
     if u.get("cleared_min") is not None:
-        rows.append(("Último borrado de averías", f"hace {_n(u['cleared_min'] / 60, 1)} h de motor"))
+        rows.append(("Último borrado de averías", f"{_n(u['cleared_min'] / 60, 1)} engine hours ago" if _LANG == "en"
+                     else f"hace {_n(u['cleared_min'] / 60, 1)} h de motor"))
     if u.get("mil_min"):
         rows.append(("Con testigo de avería encendido", f"{_n(u['mil_min'] / 60, 1)} h"))
     if m.get("vin"):
@@ -280,7 +281,7 @@ def build_pdf(snapshot: dict, path: str | Path, lang: str = "es") -> Path:
         el.append(_section("Modificaciones detectadas"))
         for f in mods["findings"]:
             el.append(Paragraph(f"<font color='#C63A31'>!</font>&nbsp;&nbsp;<font name='{F_MED}'>{_t(f['title'])}</font> — "
-                                f"{f['detail']}", S_BODY))
+                                f"{_t(f['detail'])}", S_BODY))
 
     # Mediciones
     trend = snapshot.get("trend") or {}
@@ -300,7 +301,7 @@ def build_pdf(snapshot: dict, path: str | Path, lang: str = "es") -> Path:
         rows, row = [], []
         for v in live.values():
             val, unit = (v["value"] / 100, "bar") if v["unit"] == "kPa" else (v["value"], v["unit"])
-            row.append(Paragraph(f"<font color='#8B9099'>{v['label']}</font><br/>"
+            row.append(Paragraph(f"<font color='#8B9099'>{_t(v['label'])}</font><br/>"
                                  f"<font name='{F_MED}' size='9.5'>{_n(val, 2)} {unit}</font>", S_SMALL))
             if len(row) == 4:
                 rows.append(row)
@@ -318,8 +319,8 @@ def build_pdf(snapshot: dict, path: str | Path, lang: str = "es") -> Path:
         el.append(_section(f"Mantenimiento según horas ({_n(maint['hours_basis'], 0)} h)"))
         rows = [[Paragraph(_spaced(x), S_LABEL) for x in ("Operación", "Cada", "Próximo a", "Faltan", "Coste")]]
         for it in maint["items"]:
-            from .report_de import MAINT_DE
-            iname = MAINT_DE.get(it.get("id"), it["name"]) if _LANG == "de" else it["name"]
+            from .report_en import MAINT_EN
+            iname = MAINT_EN.get(it.get("id"), it["name"]) if _LANG == "en" else it["name"]
             rows.append([Paragraph(iname, S_SMALL), Paragraph(f"{_n(it['every_h'], 0)} h", S_SMALL),
                          Paragraph(f"{_n(it['next_due_h'], 0)} h", S_SMALL),
                          Paragraph(f"<font color='{'#B3741A' if it['soon'] else '#4C5159'}'>{_n(it['remaining_h'], 0)} h</font>", S_SMALL),
@@ -334,15 +335,15 @@ def build_pdf(snapshot: dict, path: str | Path, lang: str = "es") -> Path:
     for d in snapshot["dtcs"]:
         sc = SEV[d["severity"]]
         parts = "; ".join(f"{p['nombre']} ({_n(p['min'], 0)}–{_n(p['max'], 0)} €)" for p in d["parts"]) or _t("No requiere piezas")
-        from . import report_de as DE
-        sev_txt = (DE.SEV_DE if _LANG == "de" else SEV_TXT)[d["severity"]]
-        kind_txt = (DE.KIND_DE if _LANG == "de" else KIND_TXT).get(d.get("kind"), _t("ACTIVA") if d["active"] else _t("HISTÓRICA"))
-        d_name = DE.dtc_name(d) if _LANG == "de" else d["name"]
-        d_fmi = DE.fmi_text(d) if _LANG == "de" else d["fmi_text"]
+        from . import report_en as EN
+        sev_txt = (EN.SEV_EN if _LANG == "en" else SEV_TXT)[d["severity"]]
+        kind_txt = (EN.KIND_EN if _LANG == "en" else KIND_TXT).get(d.get("kind"), _t("ACTIVA") if d["active"] else _t("HISTÓRICA"))
+        d_name = EN.dtc_name(d) if _LANG == "en" else d["name"]
+        d_fmi = EN.fmi_text(d) if _LANG == "en" else d["fmi_text"]
         rows = [
             [Paragraph(f"<font name='{F_SEMI}' color='{sc.hexval()}' size='6.6'>{_spaced(sev_txt)}</font>"
                        f"&nbsp;&nbsp;&nbsp;<font color='#8B9099' size='7'>{d['code']} · "
-                       f"{kind_txt} · {d['source_name']}</font>", S_BODY)],
+                       f"{kind_txt} · {_t(d['source_name'])}</font>", S_BODY)],
             [Paragraph(f"<font name='{F_MED}' size='10.5'>{d_name}</font> — {d_fmi}", S_BODY)],
         ]
         if d.get("warning"):
@@ -398,7 +399,7 @@ def build_pdf(snapshot: dict, path: str | Path, lang: str = "es") -> Path:
     rows = [[Paragraph(_spaced(x), S_LABEL) for x in ("Dir.", "Unidad", "Software / calibración", "Horas", "Act.", "Hist.")]]
     for e in snapshot["ecus"]:
         sw = list(e.get("software") or []) + [f"{c['cal_id']} · CVN {c['cvn']}" for c in e.get("calibrations") or []]
-        rows.append([Paragraph(e["address_hex"], S_SMALL), Paragraph(e["name"], S_SMALL),
+        rows.append([Paragraph(e["address_hex"], S_SMALL), Paragraph(_t(e["name"]), S_SMALL),
                      Paragraph("<br/>".join(sw) or "—", S_SMALL), Paragraph(_n(e.get("engine_hours")), S_SMALL),
                      Paragraph(str(e["active_dtcs"]), S_SMALL), Paragraph(str(e["history_dtcs"]), S_SMALL)])
     et = Table(rows, colWidths=[20 * mm, 50 * mm, 62 * mm, 20 * mm, 12 * mm, 12 * mm], repeatRows=1)

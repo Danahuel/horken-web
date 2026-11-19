@@ -87,8 +87,8 @@ Diccionario: 98 SPN con procedimiento propio; con el diccionario oficial SAE J19
   AdBlue, DPF… con próximo vencimiento y coste.
 - **Informe de compra**: coste para dejarla a punto, horas ocultas valoradas (€/h según el tipo de máquina),
   rebaja recomendada y oferta máxima si se indica el precio que piden.
-- **Historial por máquina**, **fotos y notas** del taller (también en el PDF) e **informe en alemán**
-  (estructura, valoración, averías y FMI en alemán; procedimientos detallados en español).
+- **Historial por máquina**, **fotos y notas** del taller (también en el PDF) e **informe en inglés**
+  (estructura, valoración, averías y FMI en inglés; procedimientos detallados en español).
 
 ## Comprobaciones de horómetro y procedencia
 

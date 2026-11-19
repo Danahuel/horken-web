@@ -124,7 +124,7 @@ def run(bus: can.BusABC | None, cfg: dict, args, sim=None, car=None, j1587_api=N
         if hasattr(sink, "journal"):
             snap["journal"] = sink.journal()
         lang = lang or cfg.get("idioma_informe", "es")
-        pdf = report.build_pdf(snap, Path(args.carpeta) / f"{session_id}{'-de' if lang == 'de' else ''}.pdf", lang=lang)
+        pdf = report.build_pdf(snap, Path(args.carpeta) / f"{session_id}{'-en' if lang == 'en' else ''}.pdf", lang=lang)
         try:
             from .mailer import send_report as mail
             mail(cfg["smtp"], recipients or meta["recipients"], snap, pdf)

@@ -350,7 +350,7 @@ function readingSkeleton() {
       <div class="act-rec"><div><div class="t">Grabación de tramas</div><div class="d" id="rec-d"></div></div>
         <button type="button" class="sw" id="rec-sw" aria-pressed="false"><i></i></button></div>
       <div><div class="act-mail"><input id="mail-to" placeholder="correo@ejemplo.com, otro@ejemplo.com">
-        <select id="mail-lang" style="width:86px"><option value="es">ES</option><option value="de">DE</option></select>
+        <select id="mail-lang" style="width:86px"><option value="es">ES</option><option value="en">EN</option></select>
         <button id="mail-go">Enviar informe</button></div></div>
     </div>`;
 }

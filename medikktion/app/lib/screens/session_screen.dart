@@ -908,7 +908,7 @@ class _ReportTabState extends State<ReportTab> {
       Row(children: [
         Text('IDIOMA DEL INFORME', style: label(context, size: 9.5)),
         const Spacer(),
-        for (final l in const [('es', 'Español'), ('de', 'Deutsch')])
+        for (final l in const [('es', 'Español'), ('en', 'English')])
           Padding(
             padding: const EdgeInsets.only(left: 8),
             child: ChoiceChip(
